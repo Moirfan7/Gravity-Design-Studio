@@ -1228,14 +1228,15 @@ export const App: React.FC = () => {
                 <input 
                   type="text" 
                   readOnly 
-                  value={`${window.location.href.split('?')[0].replace(/\/$/, '')}/?share=${encodeURIComponent(projectName.toLowerCase().replace(/\s+/g, '-'))}&mode=${shareAccess}`}
+                  value={`${window.location.href.split('?')[0].replace(/\/$/, '')}/?share=${encodeURIComponent(projectName.toLowerCase().replace(/\s+/g, '-'))}&mode=${shareAccess}&data=${btoa(unescape(encodeURIComponent(JSON.stringify({ pages, keyframes }))))}`}
                   style={{ flex: 1, fontSize: '11px', fontFamily: 'var(--font-mono)' }}
                 />
                 <button 
                   className="btn btn-primary" 
                   onClick={() => {
                     const base = window.location.href.split('?')[0].replace(/\/$/, '');
-                    const link = `${base}/?share=${encodeURIComponent(projectName.toLowerCase().replace(/\s+/g, '-'))}&mode=${shareAccess}`;
+                    const base64Str = btoa(unescape(encodeURIComponent(JSON.stringify({ pages, keyframes }))));
+                    const link = `${base}/?share=${encodeURIComponent(projectName.toLowerCase().replace(/\s+/g, '-'))}&mode=${shareAccess}&data=${base64Str}`;
                     navigator.clipboard.writeText(link);
                     alert("Invitation Link copied to clipboard!");
                   }}
