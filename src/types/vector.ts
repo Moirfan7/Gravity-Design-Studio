@@ -1,4 +1,4 @@
-export type ToolType = 'select' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'pan' | 'triangle' | 'star' | 'comment';
+export type ToolType = 'select' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'pan' | 'triangle' | 'star' | 'pencil' | 'eraser';
 
 export interface GradientStop {
   offset: number;

@@ -3,7 +3,7 @@ import {
   Pointer, Square, Circle, Type, Save, 
   Undo2, Redo2, Trash2, Group, Ungroup, ChevronDown, 
   Minimize, Plus, FileCode, Combine, Triangle, Star,
-  MessageSquare, Share2, Play, Cloud, Home
+  Share2, Play, Cloud, Home, Pencil, Eraser
 } from 'lucide-react';
 import type { ToolType } from '../types/vector';
 
@@ -33,6 +33,12 @@ interface ToolbarProps {
   setShowShareModal: (val: boolean) => void;
   setInPresentationMode: (val: boolean) => void;
   isViewOnly: boolean;
+  pencilSize: number;
+  setPencilSize: (val: number) => void;
+  pencilColor: string;
+  setPencilColor: (val: string) => void;
+  eraserSize: number;
+  setEraserSize: (val: number) => void;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -59,6 +65,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   setShowShareModal,
   setInPresentationMode,
   isViewOnly,
+  pencilSize,
+  setPencilSize,
+  pencilColor,
+  setPencilColor,
+  eraserSize,
+  setEraserSize,
 }) => {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -66,13 +78,14 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   const tools = [
     { type: 'select' as ToolType, label: 'Select (V)', icon: Pointer },
     { type: 'pen' as ToolType, label: 'Pen Tool (P)', icon: FileCode },
+    { type: 'pencil' as ToolType, label: 'Pencil (N)', icon: Pencil },
+    { type: 'eraser' as ToolType, label: 'Eraser (E)', icon: Eraser },
     { type: 'rectangle' as ToolType, label: 'Rectangle (R)', icon: Square },
     { type: 'ellipse' as ToolType, label: 'Ellipse (O)', icon: Circle },
     { type: 'triangle' as ToolType, label: 'Triangle (T)', icon: Triangle },
     { type: 'star' as ToolType, label: 'Star (S)', icon: Star },
     { type: 'line' as ToolType, label: 'Line (L)', icon: Minimize },
     { type: 'text' as ToolType, label: 'Text Tool (T)', icon: Type },
-    { type: 'comment' as ToolType, label: 'Comment (C)', icon: MessageSquare },
   ];
 
   return (
@@ -287,7 +300,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         {tools.map((t) => {
           const Icon = t.icon;
           const isActive = activeTool === t.type;
-          const isDisabled = isViewOnly && t.type !== 'select' && t.type !== 'comment';
+          const isDisabled = isViewOnly && t.type !== 'select';
           return (
             <button
               key={t.type}
@@ -309,6 +322,68 @@ export const Toolbar: React.FC<ToolbarProps> = ({
           );
         })}
       </div>
+
+      {/* Pencil Options Panel */}
+      {activeTool === 'pencil' && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '4px 10px',
+          background: 'var(--bg-panel-solid)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+          fontSize: '11px',
+          color: 'var(--text-main)'
+        }}>
+          <span style={{ fontWeight: '600' }}>Pencil Size:</span>
+          <input 
+            type="range" 
+            min="1" 
+            max="50" 
+            value={pencilSize} 
+            onChange={(e) => setPencilSize(Number(e.target.value))}
+            style={{ width: '70px', cursor: 'pointer' }}
+          />
+          <span style={{ fontFamily: 'var(--font-mono)' }}>{pencilSize}px</span>
+          
+          <div style={{ height: '14px', width: '1px', background: 'var(--border-color)', margin: '0 4px' }} />
+          
+          <span style={{ fontWeight: '600' }}>Color:</span>
+          <input 
+            type="color" 
+            value={pencilColor} 
+            onChange={(e) => setPencilColor(e.target.value)}
+            style={{ width: '22px', height: '22px', border: 'none', borderRadius: '4px', background: 'transparent', cursor: 'pointer', padding: 0 }}
+          />
+        </div>
+      )}
+
+      {/* Eraser Options Panel */}
+      {activeTool === 'eraser' && (
+        <div style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '4px 10px',
+          background: 'var(--bg-panel-solid)',
+          borderRadius: '8px',
+          border: '1px solid var(--border-color)',
+          fontSize: '11px',
+          color: 'var(--text-main)'
+        }}>
+          <span style={{ fontWeight: '600' }}>Eraser Size:</span>
+          <input 
+            type="range" 
+            min="5" 
+            max="100" 
+            value={eraserSize} 
+            onChange={(e) => setEraserSize(Number(e.target.value))}
+            style={{ width: '70px', cursor: 'pointer' }}
+          />
+          <span style={{ fontFamily: 'var(--font-mono)' }}>{eraserSize}px</span>
+        </div>
+      )}
 
       {/* Right section: Actions (Undo/Redo/Delete/Group/Zoom) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>

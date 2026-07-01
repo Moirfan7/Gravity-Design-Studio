@@ -5,7 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { Canvas } from './components/Canvas';
 import { Inspector } from './components/Inspector';
 import { Timeline } from './components/Timeline';
-import type { Page, VectorElement, Keyframe, ToolType, Comment } from './types/vector';
+import type { Page, VectorElement, Keyframe, ToolType } from './types/vector';
 import { useHistory } from './hooks/useHistory';
 import { interpolateProperty } from './utils/vectorMath';
 
@@ -149,22 +149,7 @@ export const App: React.FC = () => {
     }
   }, [projectState, projectName, activePageId, showDashboard, pages]);
 
-  // Collaboration Suite States
-  const [comments, setComments] = useState<Comment[]>([
-    {
-      id: 'mock-c1',
-      pageId: 'page-1',
-      x: 350,
-      y: 200,
-      author: 'Alex',
-      text: 'Need a softer shadow blur here?',
-      timestamp: '10:45 AM',
-      resolved: false,
-      replies: [
-        { author: 'Sarah', text: 'Good catch, adjusted!', timestamp: '10:47 AM' }
-      ]
-    }
-  ]);
+
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareAccess, setShareAccess] = useState<'view' | 'edit'>('edit');
   const [isLivePresenting, setIsLivePresenting] = useState(false);
@@ -172,6 +157,9 @@ export const App: React.FC = () => {
   const [syncStatus, setSyncStatus] = useState<'saved' | 'saving'>('saved');
   const [isViewOnly, setIsViewOnly] = useState(false);
   const [animationEasing, setAnimationEasing] = useState<'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'bounce'>('linear');
+  const [pencilSize, setPencilSize] = useState<number>(4);
+  const [pencilColor, setPencilColor] = useState<string>('#8076a3');
+  const [eraserSize, setEraserSize] = useState<number>(20);
 
   // Check URL Query Parameters for shared link on load
   useEffect(() => {
@@ -959,8 +947,9 @@ export const App: React.FC = () => {
           gridEnabled={false}
           marqueeRect={null}
           setMarqueeRect={() => {}}
-          comments={comments}
-          setComments={setComments}
+          pencilSize={pencilSize}
+          pencilColor={pencilColor}
+          eraserSize={eraserSize}
           isLivePresenting={isLivePresenting}
           isViewOnly={isViewOnly}
         />
@@ -1108,6 +1097,12 @@ export const App: React.FC = () => {
             setShowShareModal={setShowShareModal}
             setInPresentationMode={setInPresentationMode}
             isViewOnly={isViewOnly}
+            pencilSize={pencilSize}
+            setPencilSize={setPencilSize}
+            pencilColor={pencilColor}
+            setPencilColor={setPencilColor}
+            eraserSize={eraserSize}
+            setEraserSize={setEraserSize}
           />
 
           <div className="workspace-layout">
@@ -1146,8 +1141,9 @@ export const App: React.FC = () => {
                 gridEnabled={gridEnabled}
                 marqueeRect={marqueeRect}
                 setMarqueeRect={setMarqueeRect}
-                comments={comments}
-                setComments={setComments}
+                pencilSize={pencilSize}
+                pencilColor={pencilColor}
+                eraserSize={eraserSize}
                 isLivePresenting={isLivePresenting}
                 isViewOnly={isViewOnly}
               />
