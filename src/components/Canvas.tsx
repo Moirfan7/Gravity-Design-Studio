@@ -953,12 +953,11 @@ export const Canvas: React.FC<CanvasProps> = ({
                   <path
                     key={el.id}
                     d={getPathD(el.points || [], el.isClosed || false)}
-                    // Translate elements x/y since path values are coordinates normalized relative to x,y
                     {...commonProps}
-                    transform={`translate(${el.x}, ${el.y}) rotate(${el.rotation}, ${el.width/2}, ${el.height/2})`}
                     style={{
                       ...commonProps.style,
-                      transform: 'none', // Overwritten by transform translate
+                      transform: `translate(${el.x}px, ${el.y}px) rotate(${el.rotation}deg)`,
+                      transformOrigin: '50% 50%'
                     }}
                   />
                 );
