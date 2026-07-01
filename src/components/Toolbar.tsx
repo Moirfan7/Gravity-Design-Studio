@@ -283,23 +283,25 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         padding: '3px',
         borderRadius: '8px',
         border: '1px solid var(--border-color)',
-        pointerEvents: isViewOnly ? 'none' : 'auto',
-        opacity: isViewOnly ? 0.6 : 1
       }}>
         {tools.map((t) => {
           const Icon = t.icon;
           const isActive = activeTool === t.type;
+          const isDisabled = isViewOnly && t.type !== 'select' && t.type !== 'comment';
           return (
             <button
               key={t.type}
               className="btn btn-icon-only"
-              title={t.label}
+              title={isDisabled ? `${t.label} (Locked in View Mode)` : t.label}
               onClick={() => setActiveTool(t.type)}
               style={{
                 background: isActive ? 'var(--accent)' : 'transparent',
                 border: 'none',
                 color: isActive ? '#fff' : 'var(--text-main)',
                 transition: 'all 0.15s ease',
+                opacity: isDisabled ? 0.25 : 1,
+                pointerEvents: isDisabled ? 'none' : 'auto',
+                cursor: isDisabled ? 'not-allowed' : 'pointer'
               }}
             >
               <Icon size={16} />
