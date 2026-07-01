@@ -12,6 +12,7 @@ interface CanvasProps {
   onClearSelection: () => void;
   onAddElement: (el: VectorElement) => void;
   onUpdateElements: (updates: Partial<VectorElement>[], overwrite?: boolean) => void;
+  onDeleteElements: (ids: string[]) => void;
   zoom: number;
   setZoom: (z: number) => void;
   panOffset: { x: number; y: number };
@@ -62,6 +63,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   onClearSelection,
   onAddElement,
   onUpdateElements,
+  onDeleteElements,
   zoom,
   setZoom,
   panOffset,
@@ -278,8 +280,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       }) || [];
       if (toErase.length > 0) {
         const eraseIds = toErase.map(e => e.id);
-        const remaining = (page?.elements || []).filter(el => !eraseIds.includes(el.id));
-        onUpdateElements(remaining);
+        onDeleteElements(eraseIds);
       }
       return;
     }
@@ -389,8 +390,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       }) || [];
       if (toErase.length > 0) {
         const eraseIds = toErase.map(e => e.id);
-        const remaining = (page?.elements || []).filter(el => !eraseIds.includes(el.id));
-        onUpdateElements(remaining);
+        onDeleteElements(eraseIds);
       }
       return;
     }

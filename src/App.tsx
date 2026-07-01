@@ -544,6 +544,28 @@ export const App: React.FC = () => {
     triggerCloudSync();
   };
 
+  const handleDeleteElements = (ids: string[]) => {
+    if (ids.length === 0) return;
+    const newKfs = keyframes.filter((kf) => !ids.includes(kf.elementId));
+    const updatedPages = pages.map((p) => {
+      if (p.id === activePageId) {
+        return {
+          ...p,
+          elements: p.elements.filter((el) => !ids.includes(el.id))
+        };
+      }
+      return p;
+    });
+
+    setProjectState({
+      pages: updatedPages,
+      keyframes: newKfs
+    });
+    // Remove deleted IDs from selected list
+    setSelectedIds(prev => prev.filter(id => !ids.includes(id)));
+    triggerCloudSync();
+  };
+
   const handleToggleVisibility = (id: string) => {
     const el = activePage.elements.find((e) => e.id === id);
     if (!el) return;
@@ -939,6 +961,7 @@ export const App: React.FC = () => {
           onClearSelection={() => setSelectedIds([])}
           onAddElement={handleAddElement}
           onUpdateElements={handleUpdateElements}
+          onDeleteElements={handleDeleteElements}
           zoom={zoom}
           setZoom={setZoom}
           panOffset={panOffset}
@@ -1133,6 +1156,7 @@ export const App: React.FC = () => {
                 onClearSelection={() => setSelectedIds([])}
                 onAddElement={handleAddElement}
                 onUpdateElements={handleUpdateElements}
+                onDeleteElements={handleDeleteElements}
                 zoom={zoom}
                 setZoom={setZoom}
                 panOffset={panOffset}
