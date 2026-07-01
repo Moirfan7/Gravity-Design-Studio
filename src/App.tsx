@@ -544,14 +544,18 @@ export const App: React.FC = () => {
     triggerCloudSync();
   };
 
-  const handleDeleteElements = (ids: string[]) => {
-    if (ids.length === 0) return;
-    const newKfs = keyframes.filter((kf) => !ids.includes(kf.elementId));
+
+
+  const handleEraseAction = (deleteIds: string[], addElements: VectorElement[]) => {
+    if (deleteIds.length === 0 && addElements.length === 0) return;
+    
+    const newKfs = keyframes.filter((kf) => !deleteIds.includes(kf.elementId));
     const updatedPages = pages.map((p) => {
       if (p.id === activePageId) {
+        const filtered = p.elements.filter((el) => !deleteIds.includes(el.id));
         return {
           ...p,
-          elements: p.elements.filter((el) => !ids.includes(el.id))
+          elements: [...filtered, ...addElements]
         };
       }
       return p;
@@ -561,8 +565,8 @@ export const App: React.FC = () => {
       pages: updatedPages,
       keyframes: newKfs
     });
-    // Remove deleted IDs from selected list
-    setSelectedIds(prev => prev.filter(id => !ids.includes(id)));
+    // Remove deleted IDs from selection
+    setSelectedIds(prev => prev.filter(id => !deleteIds.includes(id)));
     triggerCloudSync();
   };
 
@@ -961,7 +965,7 @@ export const App: React.FC = () => {
           onClearSelection={() => setSelectedIds([])}
           onAddElement={handleAddElement}
           onUpdateElements={handleUpdateElements}
-          onDeleteElements={handleDeleteElements}
+          onEraseAction={handleEraseAction}
           zoom={zoom}
           setZoom={setZoom}
           panOffset={panOffset}
@@ -1156,7 +1160,7 @@ export const App: React.FC = () => {
                 onClearSelection={() => setSelectedIds([])}
                 onAddElement={handleAddElement}
                 onUpdateElements={handleUpdateElements}
-                onDeleteElements={handleDeleteElements}
+                onEraseAction={handleEraseAction}
                 zoom={zoom}
                 setZoom={setZoom}
                 panOffset={panOffset}

@@ -12,7 +12,7 @@ interface CanvasProps {
   onClearSelection: () => void;
   onAddElement: (el: VectorElement) => void;
   onUpdateElements: (updates: Partial<VectorElement>[], overwrite?: boolean) => void;
-  onDeleteElements: (ids: string[]) => void;
+  onEraseAction: (deleteIds: string[], addElements: VectorElement[]) => void;
   zoom: number;
   setZoom: (z: number) => void;
   panOffset: { x: number; y: number };
@@ -63,7 +63,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   onClearSelection,
   onAddElement,
   onUpdateElements,
-  onDeleteElements,
+  onEraseAction,
   zoom,
   setZoom,
   panOffset,
@@ -259,8 +259,12 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (activeTool === 'eraser') {
       setDragAction('erase');
       setIsDragging(true);
+      
       const radius = eraserSize / 2;
-      const toErase = page?.elements.filter(el => {
+      const deleteIds: string[] = [];
+      const addElements: VectorElement[] = [];
+
+      page?.elements.forEach(el => {
         const elX1 = el.x;
         const elY1 = el.y;
         const elX2 = el.x + el.width;
@@ -268,19 +272,75 @@ export const Canvas: React.FC<CanvasProps> = ({
         const dx = Math.max(elX1 - sx, 0, sx - elX2);
         const dy = Math.max(elY1 - sy, 0, sy - elY2);
         const dist = Math.hypot(dx, dy);
-        if (dist <= radius) return true;
-        if (el.points) {
-          return el.points.some(p => {
-            const px = el.x + p.x;
-            const py = el.y + p.y;
-            return Math.hypot(px - sx, py - sy) <= radius;
+        
+        if (dist > radius) return;
+
+        if (el.type !== 'path' || !el.points || el.points.length === 0) {
+          deleteIds.push(el.id);
+          return;
+        }
+
+        const segments: PathPoint[][] = [];
+        let currentSegment: PathPoint[] = [];
+        let hasErasedPoint = false;
+
+        el.points.forEach(p => {
+          const px = el.x + p.x;
+          const py = el.y + p.y;
+          const isErased = Math.hypot(px - sx, py - sy) <= radius;
+          if (isErased) {
+            hasErasedPoint = true;
+            if (currentSegment.length > 0) {
+              segments.push(currentSegment);
+              currentSegment = [];
+            }
+          } else {
+            currentSegment.push(p);
+          }
+        });
+
+        if (currentSegment.length > 0) {
+          segments.push(currentSegment);
+        }
+
+        if (hasErasedPoint) {
+          deleteIds.push(el.id);
+          segments.forEach(seg => {
+            if (seg.length < 2) return;
+            const xs = seg.map(p => el.x + p.x);
+            const ys = seg.map(p => el.y + p.y);
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+            const normalized = seg.map(p => ({
+              ...p,
+              x: (el.x + p.x) - minX,
+              y: (el.y + p.y) - minY
+            }));
+
+            addElements.push({
+              id: Math.random().toString(36).substr(2, 9),
+              type: 'path',
+              name: `${el.name} (Split)`,
+              x: minX,
+              y: minY,
+              width: Math.max(2, maxX - minX),
+              height: Math.max(2, maxY - minY),
+              rotation: el.rotation,
+              opacity: el.opacity,
+              fill: el.fill,
+              stroke: el.stroke,
+              strokeWidth: el.strokeWidth,
+              points: normalized,
+              isClosed: false
+            });
           });
         }
-        return false;
-      }) || [];
-      if (toErase.length > 0) {
-        const eraseIds = toErase.map(e => e.id);
-        onDeleteElements(eraseIds);
+      });
+
+      if (deleteIds.length > 0 || addElements.length > 0) {
+        onEraseAction(deleteIds, addElements);
       }
       return;
     }
@@ -370,7 +430,10 @@ export const Canvas: React.FC<CanvasProps> = ({
 
     if (dragAction === 'erase') {
       const radius = eraserSize / 2;
-      const toErase = page?.elements.filter(el => {
+      const deleteIds: string[] = [];
+      const addElements: VectorElement[] = [];
+
+      page?.elements.forEach(el => {
         const elX1 = el.x;
         const elY1 = el.y;
         const elX2 = el.x + el.width;
@@ -378,19 +441,75 @@ export const Canvas: React.FC<CanvasProps> = ({
         const dx = Math.max(elX1 - canvasX, 0, canvasX - elX2);
         const dy = Math.max(elY1 - canvasY, 0, canvasY - elY2);
         const dist = Math.hypot(dx, dy);
-        if (dist <= radius) return true;
-        if (el.points) {
-          return el.points.some(p => {
-            const px = el.x + p.x;
-            const py = el.y + p.y;
-            return Math.hypot(px - canvasX, py - canvasY) <= radius;
+        
+        if (dist > radius) return;
+
+        if (el.type !== 'path' || !el.points || el.points.length === 0) {
+          deleteIds.push(el.id);
+          return;
+        }
+
+        const segments: PathPoint[][] = [];
+        let currentSegment: PathPoint[] = [];
+        let hasErasedPoint = false;
+
+        el.points.forEach(p => {
+          const px = el.x + p.x;
+          const py = el.y + p.y;
+          const isErased = Math.hypot(px - canvasX, py - canvasY) <= radius;
+          if (isErased) {
+            hasErasedPoint = true;
+            if (currentSegment.length > 0) {
+              segments.push(currentSegment);
+              currentSegment = [];
+            }
+          } else {
+            currentSegment.push(p);
+          }
+        });
+
+        if (currentSegment.length > 0) {
+          segments.push(currentSegment);
+        }
+
+        if (hasErasedPoint) {
+          deleteIds.push(el.id);
+          segments.forEach(seg => {
+            if (seg.length < 2) return;
+            const xs = seg.map(p => el.x + p.x);
+            const ys = seg.map(p => el.y + p.y);
+            const minX = Math.min(...xs);
+            const maxX = Math.max(...xs);
+            const minY = Math.min(...ys);
+            const maxY = Math.max(...ys);
+            const normalized = seg.map(p => ({
+              ...p,
+              x: (el.x + p.x) - minX,
+              y: (el.y + p.y) - minY
+            }));
+
+            addElements.push({
+              id: Math.random().toString(36).substr(2, 9),
+              type: 'path',
+              name: `${el.name} (Split)`,
+              x: minX,
+              y: minY,
+              width: Math.max(2, maxX - minX),
+              height: Math.max(2, maxY - minY),
+              rotation: el.rotation,
+              opacity: el.opacity,
+              fill: el.fill,
+              stroke: el.stroke,
+              strokeWidth: el.strokeWidth,
+              points: normalized,
+              isClosed: false
+            });
           });
         }
-        return false;
-      }) || [];
-      if (toErase.length > 0) {
-        const eraseIds = toErase.map(e => e.id);
-        onDeleteElements(eraseIds);
+      });
+
+      if (deleteIds.length > 0 || addElements.length > 0) {
+        onEraseAction(deleteIds, addElements);
       }
       return;
     }
