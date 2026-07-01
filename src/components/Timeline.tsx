@@ -13,6 +13,7 @@ interface TimelineProps {
   setIsLooping: (looping: boolean) => void;
   onAddKeyframe: (elementId: string, property: Keyframe['property'], value: any) => void;
   onRemoveKeyframe: (keyframeId: string) => void;
+  onApplyPresetAnimation: (elementId: string, preset: 'fade-in' | 'slide-in' | 'spin' | 'pulse' | 'bounce' | 'clear') => void;
 }
 
 const TOTAL_FRAMES = 120; // 4 seconds at 30 fps
@@ -29,6 +30,7 @@ export const Timeline: React.FC<TimelineProps> = ({
   setIsLooping,
   onAddKeyframe,
   onRemoveKeyframe,
+  onApplyPresetAnimation,
 }) => {
   const rulerRef = useRef<HTMLDivElement>(null);
   const isSingle = selectedElements.length === 1;
@@ -156,6 +158,19 @@ export const Timeline: React.FC<TimelineProps> = ({
           <span style={{ fontSize: '11px', color: 'var(--text-dim)', borderLeft: '1px solid var(--border-color)', paddingLeft: '12px', fontFamily: 'var(--font-mono)' }}>
             30 FPS
           </span>
+          
+          {/* Quick Animation Presets */}
+          {element && (
+            <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid var(--border-color)', paddingLeft: '12px' }}>
+              <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>Quick Motion:</span>
+              <button className="btn" style={{ padding: '3px 8px', fontSize: '10px', height: '22px' }} onClick={() => onApplyPresetAnimation(element.id, 'fade-in')}>Fade In</button>
+              <button className="btn" style={{ padding: '3px 8px', fontSize: '10px', height: '22px' }} onClick={() => onApplyPresetAnimation(element.id, 'slide-in')}>Slide In</button>
+              <button className="btn" style={{ padding: '3px 8px', fontSize: '10px', height: '22px' }} onClick={() => onApplyPresetAnimation(element.id, 'spin')}>Spin</button>
+              <button className="btn" style={{ padding: '3px 8px', fontSize: '10px', height: '22px' }} onClick={() => onApplyPresetAnimation(element.id, 'pulse')}>Pulse</button>
+              <button className="btn" style={{ padding: '3px 8px', fontSize: '10px', height: '22px' }} onClick={() => onApplyPresetAnimation(element.id, 'bounce')}>Bounce</button>
+              <button className="btn" style={{ padding: '3px 8px', fontSize: '10px', height: '22px', color: 'var(--accent-danger)' }} onClick={() => onApplyPresetAnimation(element.id, 'clear')}>Clear</button>
+            </div>
+          )}
         </div>
 
         {/* Current frame readout */}

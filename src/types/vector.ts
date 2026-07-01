@@ -1,4 +1,4 @@
-export type ToolType = 'select' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'pan' | 'triangle' | 'star';
+export type ToolType = 'select' | 'pen' | 'rectangle' | 'ellipse' | 'line' | 'text' | 'pan' | 'triangle' | 'star' | 'comment';
 
 export interface GradientStop {
   offset: number;
@@ -75,4 +75,31 @@ export interface Page {
   height: number;
   background: string;
   elements: VectorElement[];
+}
+
+export interface CommentReply {
+  author: string;
+  text: string;
+  timestamp: string;
+}
+
+export interface Comment {
+  id: string;
+  pageId: string;
+  x: number;
+  y: number;
+  author: string;
+  text: string;
+  timestamp: string;
+  resolved: boolean;
+  replies: CommentReply[];
+}
+
+export interface Collaborator {
+  id: string;
+  name: string;
+  color: string;
+  x: number;
+  y: number;
+  active: boolean;
 }

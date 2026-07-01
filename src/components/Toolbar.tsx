@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { 
   Pointer, Square, Circle, Type, Save, 
   Undo2, Redo2, Trash2, Group, Ungroup, ChevronDown, 
-  Minimize, Plus, HelpCircle, FileCode, Combine, Triangle, Star
+  Minimize, Plus, FileCode, Combine, Triangle, Star,
+  MessageSquare, Share2, Play, Phone, Cloud, Home
 } from 'lucide-react';
 import type { ToolType } from '../types/vector';
 
@@ -26,6 +27,14 @@ interface ToolbarProps {
   onExportPNG: () => void;
   onExportCSS: () => void;
   onNew: () => void;
+  
+  // Collaborative addition props
+  syncStatus: 'saved' | 'saving';
+  inVoiceCall: boolean;
+  setInVoiceCall: (val: boolean) => void;
+  setShowShareModal: (val: boolean) => void;
+  setInPresentationMode: (val: boolean) => void;
+  isViewOnly: boolean;
 }
 
 export const Toolbar: React.FC<ToolbarProps> = ({
@@ -48,6 +57,12 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onExportPNG,
   onExportCSS,
   onNew,
+  syncStatus,
+  inVoiceCall,
+  setInVoiceCall,
+  setShowShareModal,
+  setInPresentationMode,
+  isViewOnly,
 }) => {
   const [fileMenuOpen, setFileMenuOpen] = useState(false);
   const [exportMenuOpen, setExportMenuOpen] = useState(false);
@@ -61,7 +76,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     { type: 'star' as ToolType, label: 'Star (S)', icon: Star },
     { type: 'line' as ToolType, label: 'Line (L)', icon: Minimize },
     { type: 'text' as ToolType, label: 'Text Tool (T)', icon: Type },
-    { type: 'pan' as ToolType, label: 'Pan Canvas (H)', icon: HelpCircle },
+    { type: 'comment' as ToolType, label: 'Comment (C)', icon: MessageSquare },
   ];
 
   return (
@@ -77,18 +92,58 @@ export const Toolbar: React.FC<ToolbarProps> = ({
     }}>
       {/* Left section: Logo & File Options */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-        <div 
-          onClick={onNew}
-          style={{ 
-            fontSize: '16px', 
-            fontWeight: '700', 
-            cursor: 'pointer',
-            background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))',
-            WebkitBackgroundClip: 'text',
-            WebkitTextFillColor: 'transparent',
-          }}
-        >
-          Gravity
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button 
+            className="btn" 
+            onClick={onNew} 
+            title="Dashboard Access"
+            style={{ 
+              background: 'transparent', 
+              border: 'none', 
+              padding: '6px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--text-muted)'
+            }}
+          >
+            <Home size={16} />
+          </button>
+          <div 
+            onClick={onNew}
+            style={{ 
+              fontSize: '15px', 
+              fontWeight: '700', 
+              cursor: 'pointer',
+              background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
+            }}
+          >
+            Gravity
+          </div>
+          
+          {/* Cloud Sync Status Indicator */}
+          <div 
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px', 
+              fontSize: '11px', 
+              color: syncStatus === 'saving' ? 'var(--accent)' : 'var(--accent-cyan)',
+              marginLeft: '8px',
+              padding: '2px 8px',
+              background: 'var(--bg-control)',
+              borderRadius: '12px',
+              transition: 'all 0.3s ease'
+            }}
+            title={syncStatus === 'saving' ? 'Saving changes to cloud...' : 'All changes saved to cloud'}
+          >
+            <Cloud size={11} className={syncStatus === 'saving' ? 'pulse-anim' : ''} />
+            <span style={{ fontSize: '10px', fontWeight: '500' }}>
+              {syncStatus === 'saving' ? 'Syncing...' : 'Synced'}
+            </span>
+          </div>
         </div>
         
         <div style={{ position: 'relative' }}>
@@ -232,6 +287,8 @@ export const Toolbar: React.FC<ToolbarProps> = ({
         padding: '3px',
         borderRadius: '8px',
         border: '1px solid var(--border-color)',
+        pointerEvents: isViewOnly ? 'none' : 'auto',
+        opacity: isViewOnly ? 0.6 : 1
       }}>
         {tools.map((t) => {
           const Icon = t.icon;
@@ -258,84 +315,133 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       {/* Right section: Actions (Undo/Redo/Delete/Group/Zoom) */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
         
-        {/* Boolean Path Operations (When > 1 elements selected) */}
-        {selectedCount > 1 && (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px',
-            borderRight: '1px solid var(--border-color)',
-            paddingRight: '12px',
-          }}>
-            <button 
-              className="btn btn-icon-only" 
-              title="Union Shapes"
-              onClick={() => onBooleanOp('union')}
-            >
-              <Combine size={15} />
-            </button>
-            <button 
-              className="btn btn-icon-only" 
-              title="Subtract Shapes"
-              onClick={() => onBooleanOp('subtract')}
-            >
-              <Combine size={15} style={{ transform: 'scaleX(-1)' }} />
-            </button>
-          </div>
-        )}
-
-        {/* Group / Ungroup Actions */}
-        {selectedCount > 0 && (
-          <div style={{ 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '4px',
-            borderRight: '1px solid var(--border-color)',
-            paddingRight: '12px',
-          }}>
-            {selectedCount > 1 && (
-              <button className="btn btn-icon-only" title="Group Selection" onClick={onGroup}>
-                <Group size={15} />
+        {/* Edit Action Group (Disabled in View Only Mode) */}
+        <div style={{ 
+          display: 'flex', 
+          alignItems: 'center', 
+          gap: '12px',
+          pointerEvents: isViewOnly ? 'none' : 'auto',
+          opacity: isViewOnly ? 0.6 : 1
+        }}>
+          {/* Boolean Path Operations (When > 1 elements selected) */}
+          {selectedCount > 1 && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              borderRight: '1px solid var(--border-color)',
+              paddingRight: '12px',
+            }}>
+              <button 
+                className="btn btn-icon-only" 
+                title="Union Shapes"
+                onClick={() => onBooleanOp('union')}
+              >
+                <Combine size={15} />
               </button>
-            )}
-            <button className="btn btn-icon-only" title="Ungroup Selection" onClick={onUngroup}>
-              <Ungroup size={15} />
+              <button 
+                className="btn btn-icon-only" 
+                title="Subtract Shapes"
+                onClick={() => onBooleanOp('subtract')}
+              >
+                <Combine size={15} style={{ transform: 'scaleX(-1)' }} />
+              </button>
+            </div>
+          )}
+
+          {/* Group / Ungroup Actions */}
+          {selectedCount > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '4px',
+              borderRight: '1px solid var(--border-color)',
+              paddingRight: '12px',
+            }}>
+              {selectedCount > 1 && (
+                <button className="btn btn-icon-only" title="Group Selection" onClick={onGroup}>
+                  <Group size={15} />
+                </button>
+              )}
+              <button className="btn btn-icon-only" title="Ungroup Selection" onClick={onUngroup}>
+                <Ungroup size={15} />
+              </button>
+            </div>
+          )}
+
+          {/* Undo, Redo, Delete */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+            <button 
+              className="btn btn-icon-only" 
+              disabled={!canUndo} 
+              title="Undo" 
+              onClick={onUndo}
+              style={{ opacity: canUndo ? 1 : 0.4, cursor: canUndo ? 'pointer' : 'not-allowed' }}
+            >
+              <Undo2 size={15} />
+            </button>
+            <button 
+              className="btn btn-icon-only" 
+              disabled={!canRedo} 
+              title="Redo" 
+              onClick={onRedo}
+              style={{ opacity: canRedo ? 1 : 0.4, cursor: canRedo ? 'pointer' : 'not-allowed' }}
+            >
+              <Redo2 size={15} />
+            </button>
+            <button 
+              className="btn btn-icon-only" 
+              disabled={selectedCount === 0} 
+              title="Delete Selected" 
+              onClick={onDeleteSelected}
+              style={{ 
+                opacity: selectedCount > 0 ? 1 : 0.4, 
+                cursor: selectedCount > 0 ? 'pointer' : 'not-allowed',
+                color: selectedCount > 0 ? 'var(--accent-danger)' : 'var(--text-main)'
+              }}
+            >
+              <Trash2 size={15} />
             </button>
           </div>
-        )}
+        </div>
 
-        {/* Undo, Redo, Delete */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+        {/* Collaboration Suite Action Buttons */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid var(--border-color)', paddingLeft: '12px' }}>
           <button 
             className="btn btn-icon-only" 
-            disabled={!canUndo} 
-            title="Undo" 
-            onClick={onUndo}
-            style={{ opacity: canUndo ? 1 : 0.4, cursor: canUndo ? 'pointer' : 'not-allowed' }}
-          >
-            <Undo2 size={15} />
-          </button>
-          <button 
-            className="btn btn-icon-only" 
-            disabled={!canRedo} 
-            title="Redo" 
-            onClick={onRedo}
-            style={{ opacity: canRedo ? 1 : 0.4, cursor: canRedo ? 'pointer' : 'not-allowed' }}
-          >
-            <Redo2 size={15} />
-          </button>
-          <button 
-            className="btn btn-icon-only" 
-            disabled={selectedCount === 0} 
-            title="Delete Selected" 
-            onClick={onDeleteSelected}
-            style={{ 
-              opacity: selectedCount > 0 ? 1 : 0.4, 
-              cursor: selectedCount > 0 ? 'pointer' : 'not-allowed',
-              color: selectedCount > 0 ? 'var(--accent-danger)' : 'var(--text-main)'
+            title={inVoiceCall ? "Leave Voice Hangout" : "Join Voice Hangout"}
+            onClick={() => setInVoiceCall(!inVoiceCall)}
+            style={{
+              background: inVoiceCall ? 'rgba(155, 196, 0, 0.15)' : 'transparent',
+              borderColor: inVoiceCall ? '#9bc400' : 'var(--border-color)',
+              color: inVoiceCall ? '#9bc400' : 'var(--text-main)',
             }}
           >
-            <Trash2 size={15} />
+            <Phone size={14} />
+          </button>
+          <button 
+            className="btn" 
+            onClick={() => setShowShareModal(true)}
+            style={{ 
+              padding: '5px 10px', 
+              fontSize: '11.5px',
+              gap: '6px',
+              background: 'var(--bg-panel-solid)',
+              borderColor: 'var(--border-color)'
+            }}
+          >
+            <Share2 size={13} /> Share
+          </button>
+          <button 
+            className="btn btn-primary" 
+            onClick={() => setInPresentationMode(true)}
+            style={{ 
+              padding: '5px 12px', 
+              fontSize: '11.5px',
+              gap: '6px',
+            }}
+          >
+            <Play size={12} fill="currentColor" /> Present
           </button>
         </div>
 

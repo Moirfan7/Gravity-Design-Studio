@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from 'react';
-import type { VectorElement, ToolType, Page, PathPoint } from '../types/vector';
+import type { VectorElement, ToolType, Page, PathPoint, Comment } from '../types/vector';
 import { getPathD, snap } from '../utils/vectorMath';
 
 interface CanvasProps {
@@ -20,6 +20,13 @@ interface CanvasProps {
   gridEnabled: boolean;
   marqueeRect: { x: number; y: number; width: number; height: number } | null;
   setMarqueeRect: (rect: { x: number; y: number; width: number; height: number } | null) => void;
+  
+  // Collaborative addition props
+  comments: Comment[];
+  setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
+  isScreensharing: boolean;
+  isLivePresenting: boolean;
+  isViewOnly: boolean;
 }
 
 export function getStarPoints(cx: number, cy: number, rx: number, ry: number): string {
@@ -63,6 +70,11 @@ export const Canvas: React.FC<CanvasProps> = ({
   gridEnabled,
   marqueeRect,
   setMarqueeRect,
+  comments,
+  setComments,
+  isScreensharing,
+  isLivePresenting,
+  isViewOnly,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   
@@ -79,6 +91,71 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Active temporary drawing shape
   const [tempDrawShape, setTempDrawShape] = useState<{ x: number; y: number; w: number; h: number } | null>(null);
+
+  // Spacebar hold temporary pan trigger
+  const [spacePressed, setSpacePressed] = useState(false);
+
+  // Comment Thread popup states
+  const [activeCommentCreator, setActiveCommentCreator] = useState<{ x: number; y: number } | null>(null);
+  const [selectedCommentId, setSelectedCommentId] = useState<string | null>(null);
+  const [newCommentText, setNewCommentText] = useState('');
+  const [commenterName, setCommenterName] = useState('Sarah');
+  const [replyText, setReplyText] = useState('');
+
+  // Live Presentation Mock Cursors State
+  const [mockCursors, setMockCursors] = useState<{ id: string; name: string; color: string; x: number; y: number }[]>([]);
+
+  // Keydown / Keyup for spacebar hold
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      const activeEl = document.activeElement;
+      const isInput = activeEl && (
+        activeEl.tagName === 'INPUT' || 
+        activeEl.tagName === 'TEXTAREA' || 
+        activeEl.hasAttribute('contenteditable')
+      );
+      if (e.code === 'Space' && !isInput) {
+        setSpacePressed(true);
+      }
+    };
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (e.code === 'Space') {
+        setSpacePressed(false);
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    window.addEventListener('keyup', handleKeyUp);
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+      window.removeEventListener('keyup', handleKeyUp);
+    };
+  }, []);
+
+  // Mock collaborative cursor movements when Live Presentation is active!
+  useEffect(() => {
+    if (!isLivePresenting) {
+      setMockCursors([]);
+      return;
+    }
+    
+    const initialCursors = [
+      { id: 'u1', name: 'Alex', color: '#ff7b00', x: 200, y: 150 },
+      { id: 'u2', name: 'Mia', color: '#ec4899', x: 550, y: 400 }
+    ];
+    setMockCursors(initialCursors);
+
+    const interval = setInterval(() => {
+      setMockCursors(prev => prev.map(c => {
+        const dx = (Math.random() - 0.5) * 80;
+        const dy = (Math.random() - 0.5) * 80;
+        const nx = Math.max(50, Math.min(page?.width || 800, c.x + dx));
+        const ny = Math.max(50, Math.min(page?.height || 600, c.y + dy));
+        return { ...c, x: nx, y: ny };
+      }));
+    }, 1500);
+
+    return () => clearInterval(interval);
+  }, [isLivePresenting, page?.width, page?.height]);
 
   // Calculate mouse position in canvas coordinates (accounting for zoom & pan)
   const getCanvasCoords = (clientX: number, clientY: number) => {
@@ -155,7 +232,7 @@ export const Canvas: React.FC<CanvasProps> = ({
     if (!containerRef.current) return;
     
     // Check if middle click or space key is pressed or H (pan tool) is active
-    const isPanMode = activeTool === 'pan' || e.button === 1 || e.shiftKey;
+    const isPanMode = activeTool === 'pan' || e.button === 1 || spacePressed;
     const { x: canvasX, y: canvasY } = getCanvasCoords(e.clientX, e.clientY);
 
     // Snapped coordinates
@@ -167,6 +244,16 @@ export const Canvas: React.FC<CanvasProps> = ({
       setDragStart({ x: e.clientX, y: e.clientY });
       setPanStart({ ...panOffset });
       setIsDragging(true);
+      return;
+    }
+
+    if (isViewOnly && activeTool !== 'select' && activeTool !== 'comment') {
+      return;
+    }
+
+    if (activeTool === 'comment') {
+      setSelectedCommentId(null);
+      setActiveCommentCreator({ x: sx, y: sy });
       return;
     }
 
@@ -425,6 +512,7 @@ export const Canvas: React.FC<CanvasProps> = ({
 
   // Resize / Drag Selection Box setup
   const startTransformDrag = (e: React.MouseEvent, action: typeof dragAction) => {
+    if (isViewOnly) return;
     e.stopPropagation();
     e.preventDefault();
     
@@ -499,7 +587,7 @@ export const Canvas: React.FC<CanvasProps> = ({
       onWheel={handleWheel}
       style={{
         background: 'var(--bg-main)',
-        cursor: activeTool === 'pan' ? 'grab' : activeTool === 'pen' ? 'crosshair' : 'default',
+        cursor: spacePressed ? (isDragging ? 'grabbing' : 'grab') : activeTool === 'pan' ? (isDragging ? 'grabbing' : 'grab') : activeTool === 'comment' ? 'help' : activeTool === 'pen' ? 'crosshair' : 'default',
       }}
     >
       <svg
@@ -560,7 +648,9 @@ export const Canvas: React.FC<CanvasProps> = ({
                 if (activeTool === 'select') {
                   e.stopPropagation();
                   onSelectElement(el.id, e.shiftKey);
-                  startTransformDrag(e, 'move');
+                  if (!isViewOnly) {
+                    startTransformDrag(e, 'move');
+                  }
                 }
               }
             };
@@ -787,8 +877,243 @@ export const Canvas: React.FC<CanvasProps> = ({
             />
           )}
 
+          {/* Collaborative Comment Pins */}
+          {comments.filter(c => c.pageId === page?.id && !c.resolved).map(c => (
+            <g 
+              key={c.id} 
+              transform={`translate(${c.x}, ${c.y})`}
+              style={{ cursor: 'pointer' }}
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedCommentId(c.id);
+                setActiveCommentCreator(null);
+              }}
+            >
+              <circle cx={0} cy={0} r={10 / zoom} fill="var(--accent)" stroke="#ffffff" strokeWidth={1.5 / zoom} style={{ transition: 'all 0.2s ease' }} />
+              <text 
+                x={0} 
+                y={3 / zoom} 
+                fontSize={10 / zoom} 
+                textAnchor="middle" 
+                style={{ pointerEvents: 'none', userSelect: 'none' }}
+              >
+                💬
+              </text>
+            </g>
+          ))}
+
+          {/* Collaborative Live Cursors */}
+          {mockCursors.map(c => (
+            <g key={c.id} transform={`translate(${c.x}, ${c.y})`} style={{ pointerEvents: 'none', transition: 'transform 0.15s ease' }}>
+              <path d="M 0 0 L 0 14 L 3.5 10.5 L 8.5 10.5 Z" fill={c.color} stroke="#ffffff" strokeWidth={1 / zoom} />
+              <g transform={`scale(${1 / zoom}) translate(10, 10)`}>
+                <rect x={0} y={-10} width={c.name.length * 6 + 10} height={14} rx={3} fill={c.color} />
+                <text x={5} y={0} fontSize={8} fill="#ffffff" fontWeight="bold" fontFamily="var(--font-sans)" style={{ userSelect: 'none' }}>
+                  {c.name}
+                </text>
+              </g>
+            </g>
+          ))}
+
         </g>
       </svg>
+
+      {/* Screensharing Glow Overlay Frame */}
+      {isScreensharing && (
+        <div 
+          style={{
+            position: 'absolute',
+            inset: 0,
+            border: '4px solid #9bc400',
+            boxShadow: '0 0 16px rgba(155, 196, 0, 0.45)',
+            pointerEvents: 'none',
+            zIndex: 900,
+            borderRadius: 'inherit'
+          }}
+        />
+      )}
+
+      {/* Floating Comment Creator Popup */}
+      {activeCommentCreator && (
+        <div 
+          className="glass-panel" 
+          style={{
+            position: 'absolute',
+            left: `${Math.max(10, Math.min(window.innerWidth - 260, activeCommentCreator.x * zoom + panOffset.x + 20))}px`,
+            top: `${Math.max(10, Math.min(window.innerHeight - 200, activeCommentCreator.y * zoom + panOffset.y))}px`,
+            width: '230px',
+            padding: '10px',
+            borderRadius: '8px',
+            zIndex: 1000,
+            boxShadow: 'var(--glass-shadow)',
+            border: '1px solid var(--border-color)',
+            display: 'flex',
+            flexDirection: 'column',
+            gap: '8px',
+            background: 'var(--bg-panel-solid)'
+          }}
+        >
+          <div style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--text-muted)' }}>DROP A COMMENT</div>
+          <input 
+            type="text" 
+            placeholder="Your Name" 
+            value={commenterName} 
+            onChange={(e) => setCommenterName(e.target.value)}
+            style={{ width: '100%', fontSize: '12px', padding: '4px 8px' }}
+          />
+          <textarea 
+            placeholder="Write a comment..." 
+            value={newCommentText} 
+            onChange={(e) => setNewCommentText(e.target.value)}
+            rows={3}
+            style={{ width: '100%', fontSize: '12px', padding: '6px', resize: 'none' }}
+          />
+          <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+            <button 
+              className="btn" 
+              onClick={() => {
+                setActiveCommentCreator(null);
+                setNewCommentText('');
+              }}
+              style={{ padding: '4px 8px', fontSize: '11px' }}
+            >
+              Cancel
+            </button>
+            <button 
+              className="btn btn-primary" 
+              onClick={() => {
+                if (newCommentText.trim()) {
+                  const newC: Comment = {
+                    id: Math.random().toString(36).substr(2, 9),
+                    pageId: page?.id || '',
+                    x: activeCommentCreator.x,
+                    y: activeCommentCreator.y,
+                    author: commenterName.trim() || 'Collaborator',
+                    text: newCommentText.trim(),
+                    timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    resolved: false,
+                    replies: []
+                  };
+                  setComments([...comments, newC]);
+                }
+                setActiveCommentCreator(null);
+                setNewCommentText('');
+              }}
+              style={{ padding: '4px 10px', fontSize: '11px' }}
+            >
+              Post
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Floating Comment Reply Thread Popup */}
+      {selectedCommentId && (() => {
+        const comment = comments.find(c => c.id === selectedCommentId);
+        if (!comment) return null;
+        return (
+          <div 
+            className="glass-panel" 
+            style={{
+              position: 'absolute',
+              left: `${Math.max(10, Math.min(window.innerWidth - 280, comment.x * zoom + panOffset.x + 20))}px`,
+              top: `${Math.max(10, Math.min(window.innerHeight - 260, comment.y * zoom + panOffset.y))}px`,
+              width: '260px',
+              padding: '12px',
+              borderRadius: '8px',
+              zIndex: 1000,
+              boxShadow: 'var(--glass-shadow)',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '8px',
+              background: 'var(--bg-panel-solid)'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ fontSize: '10px', fontWeight: 'bold', color: 'var(--accent)' }}>{comment.author.toUpperCase()}</span>
+              <span style={{ fontSize: '9px', color: 'var(--text-dim)' }}>{comment.timestamp}</span>
+            </div>
+            <div style={{ fontSize: '12px', color: 'var(--text-main)', fontWeight: '500' }}>{comment.text}</div>
+            
+            {comment.replies.length > 0 && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '6px', borderTop: '1px solid var(--border-color)', paddingTop: '6px', maxHeight: '100px', overflowY: 'auto' }}>
+                {comment.replies.map((r, idx) => (
+                  <div key={idx} style={{ fontSize: '11px', lineHeight: '1.3' }}>
+                    <span style={{ fontWeight: 'bold', color: 'var(--text-muted)' }}>{r.author}: </span>
+                    <span style={{ color: 'var(--text-main)' }}>{r.text}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            <div style={{ display: 'flex', gap: '4px', marginTop: '4px' }}>
+              <input 
+                type="text" 
+                placeholder="Reply..." 
+                value={replyText} 
+                onChange={(e) => setReplyText(e.target.value)}
+                style={{ flex: 1, fontSize: '11px', padding: '4px 6px' }}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && replyText.trim()) {
+                    setComments(comments.map(c => {
+                      if (c.id === selectedCommentId) {
+                        return {
+                          ...c,
+                          replies: [...c.replies, { author: commenterName, text: replyText.trim(), timestamp: 'Just now' }]
+                        };
+                      }
+                      return c;
+                    }));
+                    setReplyText('');
+                  }
+                }}
+              />
+              <button 
+                className="btn btn-primary" 
+                onClick={() => {
+                  if (replyText.trim()) {
+                    setComments(comments.map(c => {
+                      if (c.id === selectedCommentId) {
+                        return {
+                          ...c,
+                          replies: [...c.replies, { author: commenterName, text: replyText.trim(), timestamp: 'Just now' }]
+                        };
+                      }
+                      return c;
+                    }));
+                    setReplyText('');
+                  }
+                }}
+                style={{ padding: '4px 8px', fontSize: '11px' }}
+              >
+                Send
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', justifyContent: 'space-between', gap: '6px', marginTop: '4px' }}>
+              <button 
+                className="btn" 
+                onClick={() => {
+                  setComments(comments.map(c => c.id === selectedCommentId ? { ...c, resolved: true } : c));
+                  setSelectedCommentId(null);
+                }}
+                style={{ padding: '4px 8px', fontSize: '11px', color: 'var(--accent-success)' }}
+              >
+                Resolve
+              </button>
+              <button 
+                className="btn" 
+                onClick={() => setSelectedCommentId(null)}
+                style={{ padding: '4px 8px', fontSize: '11px' }}
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        );
+      })()}
+
     </div>
   );
 };
