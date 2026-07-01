@@ -146,9 +146,6 @@ export const App: React.FC = () => {
   ]);
   const [showShareModal, setShowShareModal] = useState(false);
   const [shareAccess, setShareAccess] = useState<'view' | 'edit'>('edit');
-  const [inVoiceCall, setInVoiceCall] = useState(false);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isScreensharing, setIsScreensharing] = useState(false);
   const [isLivePresenting, setIsLivePresenting] = useState(false);
   const [inPresentationMode, setInPresentationMode] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'saved' | 'saving'>('saved');
@@ -159,6 +156,7 @@ export const App: React.FC = () => {
     const params = new URLSearchParams(window.location.search);
     const sharedProject = params.get('share');
     const sharedMode = params.get('mode') || 'edit';
+    const sharedData = params.get('data');
     
     if (sharedProject) {
       setShowDashboard(false);
@@ -166,6 +164,22 @@ export const App: React.FC = () => {
       setProjectName(decodedName);
       if (sharedMode === 'view') {
         setIsViewOnly(true);
+      }
+
+      if (sharedData) {
+        try {
+          const jsonStr = decodeURIComponent(escape(atob(sharedData)));
+          const decoded = JSON.parse(jsonStr);
+          if (decoded && decoded.pages && decoded.pages.length > 0) {
+            setProjectState({
+              pages: decoded.pages,
+              keyframes: decoded.keyframes || []
+            });
+            setActivePageId(decoded.pages[0].id);
+          }
+        } catch (e) {
+          console.error("Failed to decode shared project snapshot data", e);
+        }
       }
     }
   }, []);
@@ -924,7 +938,6 @@ export const App: React.FC = () => {
           setMarqueeRect={() => {}}
           comments={comments}
           setComments={setComments}
-          isScreensharing={isScreensharing}
           isLivePresenting={isLivePresenting}
           isViewOnly={isViewOnly}
         />
@@ -1069,8 +1082,6 @@ export const App: React.FC = () => {
             onExportCSS={handleExportCSS}
             onNew={() => setShowDashboard(true)}
             syncStatus={syncStatus}
-            inVoiceCall={inVoiceCall}
-            setInVoiceCall={setInVoiceCall}
             setShowShareModal={setShowShareModal}
             setInPresentationMode={setInPresentationMode}
             isViewOnly={isViewOnly}
@@ -1114,7 +1125,6 @@ export const App: React.FC = () => {
                 setMarqueeRect={setMarqueeRect}
                 comments={comments}
                 setComments={setComments}
-                isScreensharing={isScreensharing}
                 isLivePresenting={isLivePresenting}
                 isViewOnly={isViewOnly}
               />
@@ -1159,70 +1169,7 @@ export const App: React.FC = () => {
         </>
       )}
 
-      {/* Floating Voice Hangout Controller */}
-      {inVoiceCall && (
-        <div 
-          className="glass-panel" 
-          style={{
-            position: 'fixed',
-            bottom: '20px',
-            right: '20px',
-            width: '220px',
-            padding: '12px',
-            borderRadius: '12px',
-            boxShadow: 'var(--glass-shadow)',
-            border: '1px solid var(--border-color)',
-            background: 'var(--bg-panel-solid)',
-            zIndex: 1000,
-            display: 'flex',
-            flexDirection: 'column',
-            gap: '10px'
-          }}
-        >
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-            <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#9bc400', animation: 'pulse 1.5s infinite' }} />
-            <span style={{ fontSize: '11px', fontWeight: 'bold', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>VOICE CALL ACTIVE</span>
-          </div>
-          
-          {/* Avatars */}
-          <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
-            <div style={{ position: 'relative' }}>
-              <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#8076a3', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', color: '#fff', border: isMuted ? 'none' : '2px solid #9bc400' }}>S</div>
-              {!isMuted && <div style={{ position: 'absolute', bottom: '-2px', right: '-2px', width: '8px', height: '8px', borderRadius: '50%', background: '#9bc400' }} />}
-            </div>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ff7b00', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', color: '#fff', border: '2px solid #9bc400' }}>A</div>
-            <div style={{ width: '28px', height: '28px', borderRadius: '50%', background: '#ec4899', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '11px', fontWeight: 'bold', color: '#fff' }}>M</div>
-          </div>
 
-          <div style={{ display: 'flex', gap: '6px', marginTop: '4px' }}>
-            <button 
-              className="btn" 
-              onClick={() => setIsMuted(!isMuted)}
-              style={{ flex: 1, padding: '6px', fontSize: '11px', justifyContent: 'center' }}
-            >
-              {isMuted ? 'Unmute' : 'Mute'}
-            </button>
-            <button 
-              className="btn" 
-              onClick={() => setIsScreensharing(!isScreensharing)}
-              style={{ flex: 1, padding: '6px', fontSize: '11px', justifyContent: 'center', background: isScreensharing ? 'rgba(155, 196, 0, 0.1)' : 'transparent', borderColor: isScreensharing ? '#9bc400' : 'var(--border-color)' }}
-            >
-              {isScreensharing ? 'Share Off' : 'Share Screen'}
-            </button>
-          </div>
-          
-          <button 
-            className="btn" 
-            onClick={() => {
-              setInVoiceCall(false);
-              setIsScreensharing(false);
-            }}
-            style={{ width: '100%', padding: '6px', fontSize: '11px', justifyContent: 'center', color: 'var(--accent-danger)' }}
-          >
-            Disconnect
-          </button>
-        </div>
-      )}
 
       {/* Share Link Access Control Modal */}
       {showShareModal && (

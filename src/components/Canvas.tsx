@@ -24,7 +24,6 @@ interface CanvasProps {
   // Collaborative addition props
   comments: Comment[];
   setComments: React.Dispatch<React.SetStateAction<Comment[]>>;
-  isScreensharing: boolean;
   isLivePresenting: boolean;
   isViewOnly: boolean;
 }
@@ -72,7 +71,6 @@ export const Canvas: React.FC<CanvasProps> = ({
   setMarqueeRect,
   comments,
   setComments,
-  isScreensharing,
   isLivePresenting,
   isViewOnly,
 }) => {
@@ -919,24 +917,14 @@ export const Canvas: React.FC<CanvasProps> = ({
       </svg>
 
       {/* Screensharing Glow Overlay Frame */}
-      {isScreensharing && (
-        <div 
-          style={{
-            position: 'absolute',
-            inset: 0,
-            border: '4px solid #9bc400',
-            boxShadow: '0 0 16px rgba(155, 196, 0, 0.45)',
-            pointerEvents: 'none',
-            zIndex: 900,
-            borderRadius: 'inherit'
-          }}
-        />
-      )}
+
 
       {/* Floating Comment Creator Popup */}
       {activeCommentCreator && (
         <div 
           className="glass-panel" 
+          onMouseDown={(e) => e.stopPropagation()}
+          onClick={(e) => e.stopPropagation()}
           style={{
             position: 'absolute',
             left: `${Math.max(10, Math.min(window.innerWidth - 260, activeCommentCreator.x * zoom + panOffset.x + 20))}px`,
@@ -1014,6 +1002,8 @@ export const Canvas: React.FC<CanvasProps> = ({
         return (
           <div 
             className="glass-panel" 
+            onMouseDown={(e) => e.stopPropagation()}
+            onClick={(e) => e.stopPropagation()}
             style={{
               position: 'absolute',
               left: `${Math.max(10, Math.min(window.innerWidth - 280, comment.x * zoom + panOffset.x + 20))}px`,

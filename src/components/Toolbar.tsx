@@ -3,7 +3,7 @@ import {
   Pointer, Square, Circle, Type, Save, 
   Undo2, Redo2, Trash2, Group, Ungroup, ChevronDown, 
   Minimize, Plus, FileCode, Combine, Triangle, Star,
-  MessageSquare, Share2, Play, Phone, Cloud, Home
+  MessageSquare, Share2, Play, Cloud, Home
 } from 'lucide-react';
 import type { ToolType } from '../types/vector';
 
@@ -30,8 +30,6 @@ interface ToolbarProps {
   
   // Collaborative addition props
   syncStatus: 'saved' | 'saving';
-  inVoiceCall: boolean;
-  setInVoiceCall: (val: boolean) => void;
   setShowShareModal: (val: boolean) => void;
   setInPresentationMode: (val: boolean) => void;
   isViewOnly: boolean;
@@ -58,8 +56,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
   onExportCSS,
   onNew,
   syncStatus,
-  inVoiceCall,
-  setInVoiceCall,
   setShowShareModal,
   setInPresentationMode,
   isViewOnly,
@@ -407,18 +403,6 @@ export const Toolbar: React.FC<ToolbarProps> = ({
 
         {/* Collaboration Suite Action Buttons */}
         <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid var(--border-color)', paddingLeft: '12px' }}>
-          <button 
-            className="btn btn-icon-only" 
-            title={inVoiceCall ? "Leave Voice Hangout" : "Join Voice Hangout"}
-            onClick={() => setInVoiceCall(!inVoiceCall)}
-            style={{
-              background: inVoiceCall ? 'rgba(155, 196, 0, 0.15)' : 'transparent',
-              borderColor: inVoiceCall ? '#9bc400' : 'var(--border-color)',
-              color: inVoiceCall ? '#9bc400' : 'var(--text-main)',
-            }}
-          >
-            <Phone size={14} />
-          </button>
           <button 
             className="btn" 
             onClick={() => setShowShareModal(true)}
