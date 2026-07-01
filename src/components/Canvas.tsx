@@ -762,18 +762,90 @@ export const Canvas: React.FC<CanvasProps> = ({
           )}
 
           {/* Render active temp draw shape */}
-          {tempDrawShape && (
-            <rect
-              x={tempDrawShape.x}
-              y={tempDrawShape.y}
-              width={tempDrawShape.w}
-              height={tempDrawShape.h}
-              fill="rgba(139, 92, 246, 0.2)"
-              stroke="var(--accent)"
-              strokeWidth={1.5 / zoom}
-              strokeDasharray="4 4"
-            />
-          )}
+          {tempDrawShape && (() => {
+            const fill = "rgba(128, 118, 163, 0.25)";
+            const stroke = "var(--accent)";
+            const strokeWidth = 1.5 / zoom;
+            
+            if (activeTool === 'rectangle') {
+              return (
+                <rect
+                  x={tempDrawShape.x}
+                  y={tempDrawShape.y}
+                  width={tempDrawShape.w}
+                  height={tempDrawShape.h}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={strokeWidth}
+                />
+              );
+            }
+            if (activeTool === 'ellipse') {
+              return (
+                <ellipse
+                  cx={tempDrawShape.x + tempDrawShape.w / 2}
+                  cy={tempDrawShape.y + tempDrawShape.h / 2}
+                  rx={Math.max(1, tempDrawShape.w / 2)}
+                  ry={Math.max(1, tempDrawShape.h / 2)}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={strokeWidth}
+                />
+              );
+            }
+            if (activeTool === 'triangle') {
+              const points = `${tempDrawShape.x + tempDrawShape.w / 2},${tempDrawShape.y} ${tempDrawShape.x + tempDrawShape.w},${tempDrawShape.y + tempDrawShape.h} ${tempDrawShape.x},${tempDrawShape.y + tempDrawShape.h}`;
+              return (
+                <polygon
+                  points={points}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={strokeWidth}
+                />
+              );
+            }
+            if (activeTool === 'star') {
+              const points = getStarPoints(
+                tempDrawShape.x + tempDrawShape.w / 2,
+                tempDrawShape.y + tempDrawShape.h / 2,
+                Math.max(1, tempDrawShape.w / 2),
+                Math.max(1, tempDrawShape.h / 2)
+              );
+              return (
+                <polygon
+                  points={points}
+                  fill={fill}
+                  stroke={stroke}
+                  strokeWidth={strokeWidth}
+                />
+              );
+            }
+            if (activeTool === 'line') {
+              return (
+                <line
+                  x1={tempDrawShape.x}
+                  y1={tempDrawShape.y}
+                  x2={tempDrawShape.x + tempDrawShape.w}
+                  y2={tempDrawShape.y + tempDrawShape.h}
+                  stroke={stroke}
+                  strokeWidth={strokeWidth}
+                />
+              );
+            }
+            
+            return (
+              <rect
+                x={tempDrawShape.x}
+                y={tempDrawShape.y}
+                width={tempDrawShape.w}
+                height={tempDrawShape.h}
+                fill="rgba(128, 118, 163, 0.15)"
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                strokeDasharray="4 4"
+              />
+            );
+          })()}
 
           {/* Selection boxes & Bounding Handles for select mode */}
           {activeTool === 'select' && singleElement && (

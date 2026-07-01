@@ -14,6 +14,8 @@ interface TimelineProps {
   onAddKeyframe: (elementId: string, property: Keyframe['property'], value: any) => void;
   onRemoveKeyframe: (keyframeId: string) => void;
   onApplyPresetAnimation: (elementId: string, preset: 'fade-in' | 'slide-in' | 'spin' | 'pulse' | 'bounce' | 'clear') => void;
+  animationEasing: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'bounce';
+  setAnimationEasing: (val: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'bounce') => void;
 }
 
 const TOTAL_FRAMES = 120; // 4 seconds at 30 fps
@@ -31,6 +33,8 @@ export const Timeline: React.FC<TimelineProps> = ({
   onAddKeyframe,
   onRemoveKeyframe,
   onApplyPresetAnimation,
+  animationEasing,
+  setAnimationEasing,
 }) => {
   const rulerRef = useRef<HTMLDivElement>(null);
   const isSingle = selectedElements.length === 1;
@@ -111,7 +115,7 @@ export const Timeline: React.FC<TimelineProps> = ({
       flexDirection: 'column',
       zIndex: 60,
       userSelect: 'none',
-      background: 'rgba(10, 11, 15, 0.9)',
+      background: 'var(--bg-panel-solid)',
     }}>
       {/* Control bar */}
       <div style={{
@@ -158,6 +162,31 @@ export const Timeline: React.FC<TimelineProps> = ({
           <span style={{ fontSize: '11px', color: 'var(--text-dim)', borderLeft: '1px solid var(--border-color)', paddingLeft: '12px', fontFamily: 'var(--font-mono)' }}>
             30 FPS
           </span>
+
+          <div style={{ display: 'flex', alignItems: 'center', gap: '6px', borderLeft: '1px solid var(--border-color)', paddingLeft: '12px' }}>
+            <span style={{ fontSize: '11px', color: 'var(--text-muted)', fontWeight: 'bold' }}>Transition:</span>
+            <select 
+              value={animationEasing} 
+              onChange={(e) => setAnimationEasing(e.target.value as any)}
+              style={{ 
+                fontSize: '11.5px', 
+                height: '24px', 
+                padding: '0 6px', 
+                background: 'var(--bg-control)', 
+                border: '1px solid var(--border-color)', 
+                color: 'var(--text-main)', 
+                borderRadius: '4px',
+                outline: 'none',
+                cursor: 'pointer'
+              }}
+            >
+              <option value="linear">Linear (Constant)</option>
+              <option value="ease-in">Ease In (Accelerate)</option>
+              <option value="ease-out">Ease Out (Decelerate)</option>
+              <option value="ease-in-out">Ease In Out (Smooth)</option>
+              <option value="bounce">Bounce Physics</option>
+            </select>
+          </div>
           
           {/* Quick Animation Presets */}
           {element && (
@@ -188,7 +217,7 @@ export const Timeline: React.FC<TimelineProps> = ({
           borderRight: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
-          background: 'rgba(0,0,0,0.1)',
+          background: 'rgba(60, 53, 64, 0.02)',
         }}>
           <div style={{ 
             height: '24px', 
@@ -221,7 +250,7 @@ export const Timeline: React.FC<TimelineProps> = ({
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'space-between',
-                      borderBottom: '1px solid rgba(255,255,255,0.03)',
+                      borderBottom: '1px solid var(--border-color)',
                     }}
                   >
                     <span style={{ color: 'var(--text-muted)' }}>{p.label}</span>
@@ -260,7 +289,7 @@ export const Timeline: React.FC<TimelineProps> = ({
               position: 'relative',
               cursor: 'ew-resize',
               width: `${(TOTAL_FRAMES + 2) * FRAME_WIDTH}px`,
-              background: 'rgba(0,0,0,0.15)',
+              background: 'rgba(60, 53, 64, 0.03)',
             }}
           >
             {/* Render ticks */}
@@ -279,7 +308,7 @@ export const Timeline: React.FC<TimelineProps> = ({
                     bottom: 0,
                     width: '1px',
                     height: isMajor ? '12px' : '6px',
-                    background: isMajor ? 'rgba(255,255,255,0.3)' : 'rgba(255,255,255,0.15)',
+                    background: isMajor ? 'rgba(60, 53, 64, 0.25)' : 'rgba(60, 53, 64, 0.1)',
                   }}
                 >
                   {isMajor && (
@@ -337,8 +366,8 @@ export const Timeline: React.FC<TimelineProps> = ({
                   style={{
                     height: '24px',
                     position: 'relative',
-                    borderBottom: '1px solid rgba(255,255,255,0.03)',
-                    background: rowIdx % 2 === 0 ? 'transparent' : 'rgba(255,255,255,0.01)',
+                    borderBottom: '1px solid var(--border-color)',
+                    background: rowIdx % 2 === 0 ? 'transparent' : 'rgba(60, 53, 64, 0.015)',
                   }}
                 >
                   {/* Keyframe diamonds */}

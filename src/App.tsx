@@ -96,6 +96,27 @@ const getInitialShowDashboard = () => {
   return saved ? JSON.parse(saved) : true;
 };
 
+const applyEasing = (t: number, type: 'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'bounce') => {
+  if (type === 'ease-in') return t * t;
+  if (type === 'ease-out') return t * (2 - t);
+  if (type === 'ease-in-out') return t < 0.5 ? 2 * t * t : -1 + (4 - 2 * t) * t;
+  if (type === 'bounce') {
+    const n1 = 7.5625;
+    const d1 = 2.75;
+    let tBounce = t;
+    if (tBounce < 1 / d1) {
+      return n1 * tBounce * tBounce;
+    } else if (tBounce < 2 / d1) {
+      return n1 * (tBounce -= 1.5 / d1) * tBounce + 0.75;
+    } else if (tBounce < 2.5 / d1) {
+      return n1 * (tBounce -= 2.25 / d1) * tBounce + 0.9375;
+    } else {
+      return n1 * (tBounce -= 2.625 / d1) * tBounce + 0.984375;
+    }
+  }
+  return t;
+};
+
 export const App: React.FC = () => {
   const [showDashboard, setShowDashboard] = useState(getInitialShowDashboard);
   const [projectName, setProjectName] = useState(getInitialProjectName);
@@ -150,6 +171,7 @@ export const App: React.FC = () => {
   const [inPresentationMode, setInPresentationMode] = useState(false);
   const [syncStatus, setSyncStatus] = useState<'saved' | 'saving'>('saved');
   const [isViewOnly, setIsViewOnly] = useState(false);
+  const [animationEasing, setAnimationEasing] = useState<'linear' | 'ease-in' | 'ease-out' | 'ease-in-out' | 'bounce'>('linear');
 
   // Check URL Query Parameters for shared link on load
   useEffect(() => {
@@ -317,7 +339,8 @@ export const App: React.FC = () => {
           const prevKf = propKfs[nextIdx - 1];
           const nextKf = propKfs[nextIdx];
           const t = (frame - prevKf.frame) / (nextKf.frame - prevKf.frame);
-          val = interpolateProperty(prop as string, prevKf.value, nextKf.value, t);
+          const easedT = applyEasing(t, animationEasing);
+          val = interpolateProperty(prop as string, prevKf.value, nextKf.value, easedT);
         }
         
         (animatedEl as any)[prop] = val;
@@ -325,7 +348,7 @@ export const App: React.FC = () => {
 
       return animatedEl;
     });
-  }, []);
+  }, [animationEasing]);
 
   const animatedElements = activePage 
     ? getAnimatedElements(activePage.elements, keyframes, currentFrame)
@@ -1142,6 +1165,8 @@ export const App: React.FC = () => {
                   onAddKeyframe={handleAddKeyframe}
                   onRemoveKeyframe={handleRemoveKeyframe}
                   onApplyPresetAnimation={handleApplyPresetAnimation}
+                  animationEasing={animationEasing}
+                  setAnimationEasing={setAnimationEasing}
                 />
               </div>
             </div>
