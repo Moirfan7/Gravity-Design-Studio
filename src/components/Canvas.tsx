@@ -815,6 +815,13 @@ export const Canvas: React.FC<CanvasProps> = ({
   const renderDefs = () => {
     return (
       <defs>
+        {/* Radial Gradient for empty canvas watermark */}
+        <radialGradient id="watermark-glow" cx="50%" cy="50%" r="50%">
+          <stop offset="0%" stopColor="rgba(255, 255, 255, 0.9)" />
+          <stop offset="50%" stopColor="rgba(254, 240, 138, 0.45)" />
+          <stop offset="100%" stopColor="rgba(255, 255, 255, 0)" />
+        </radialGradient>
+
         {/* Draw grids if enabled */}
         {gridEnabled && (
           <pattern id="grid-pattern" width={gridSize} height={gridSize} patternUnits="userSpaceOnUse">
@@ -971,6 +978,47 @@ export const Canvas: React.FC<CanvasProps> = ({
               filter: 'drop-shadow(0 10px 25px rgba(0,0,0,0.5))',
             }}
           />
+
+          {/* Branded Empty State Watermark */}
+          {elements.length === 0 && (
+            <g style={{ pointerEvents: 'none', userSelect: 'none' }}>
+              {/* GRAVITY STUDIO Title */}
+              <text
+                x={page.width / 2}
+                y={80}
+                fontSize={24}
+                fontWeight="900"
+                letterSpacing="1.5px"
+                fill="#000000"
+                textAnchor="middle"
+                fontFamily="var(--font-sans)"
+              >
+                GRAVITY STUDIO
+              </text>
+
+              {/* Glowing Background Circle */}
+              <circle
+                cx={page.width / 2}
+                cy={page.height / 2}
+                r={100}
+                fill="url(#watermark-glow)"
+              />
+
+              {/* Centered Dusty Purple Diamond */}
+              <rect
+                x={page.width / 2 - 30}
+                y={page.height / 2 - 30}
+                width={60}
+                height={60}
+                rx={12}
+                ry={12}
+                fill="#7D79A2"
+                stroke="#ffffff"
+                strokeWidth={1.5}
+                transform={`rotate(45, ${page.width / 2}, ${page.height / 2})`}
+              />
+            </g>
+          )}
 
           {/* Render Elements */}
           {elements.map((el) => {
