@@ -160,6 +160,7 @@ export const App: React.FC = () => {
   const [pencilSize, setPencilSize] = useState<number>(4);
   const [pencilColor, setPencilColor] = useState<string>('#8076a3');
   const [eraserSize, setEraserSize] = useState<number>(20);
+  const [copiedElements, setCopiedElements] = useState<VectorElement[]>([]);
 
   // Check URL Query Parameters for shared link on load
   useEffect(() => {
@@ -283,7 +284,7 @@ export const App: React.FC = () => {
     };
   }, [isPlaying, isLooping]);
 
-  // Spacebar play/pause shortcut
+  // Global keyboard shortcuts (Spacebar for play/pause, Ctrl+C/V for Copy/Paste, Ctrl+Z/Y for Undo/Redo)
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
       const activeEl = document.activeElement;
@@ -293,15 +294,73 @@ export const App: React.FC = () => {
         activeEl.hasAttribute('contenteditable')
       );
       
-      if (e.code === 'Space' && !isInput) {
+      if (isInput) return;
+
+      // Spacebar: Play/Pause timeline
+      if (e.code === 'Space') {
         e.preventDefault();
         setIsPlaying(!isPlaying);
+      }
+
+      // Ctrl + Z: Undo action
+      if (e.ctrlKey && e.code === 'KeyZ') {
+        e.preventDefault();
+        undo();
+      }
+
+      // Ctrl + Y: Redo action
+      if (e.ctrlKey && e.code === 'KeyY') {
+        e.preventDefault();
+        redo();
+      }
+
+      // Ctrl + C: Copy selected element(s)
+      if (e.ctrlKey && e.code === 'KeyC') {
+        if (selectedIds.length === 0 || !activePage) return;
+        e.preventDefault();
+        const selected = activePage.elements.filter((el) => selectedIds.includes(el.id));
+        setCopiedElements(JSON.parse(JSON.stringify(selected)));
+      }
+
+      // Ctrl + V: Paste element(s)
+      if (e.ctrlKey && e.code === 'KeyV') {
+        if (copiedElements.length === 0 || !activePage) return;
+        e.preventDefault();
+        
+        const pasted: VectorElement[] = copiedElements.map((el) => {
+          return {
+            ...el,
+            id: Math.random().toString(36).substr(2, 9),
+            x: el.x + 25,
+            y: el.y + 25,
+            name: `${el.name} (Copy)`
+          };
+        });
+
+        const updatedPages = pages.map((p) => {
+          if (p.id === activePageId) {
+            return {
+              ...p,
+              elements: [...p.elements, ...pasted]
+            };
+          }
+          return p;
+        });
+
+        setProjectState({
+          ...projectState,
+          pages: updatedPages
+        });
+
+        setSelectedIds(pasted.map((p) => p.id));
+        triggerCloudSync();
+        setCopiedElements(pasted);
       }
     };
     
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [isPlaying]);
+  }, [isPlaying, selectedIds, activePage, activePageId, copiedElements, pages, projectState, undo, redo]);
 
   // ANIMATION VALUE INTERPOLATOR SELECTOR
   const getAnimatedElements = useCallback((elements: VectorElement[], keyframes: Keyframe[], frame: number): VectorElement[] => {

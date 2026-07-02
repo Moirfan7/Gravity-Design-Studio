@@ -876,6 +876,52 @@ export const Canvas: React.FC<CanvasProps> = ({
     );
   };
 
+  const handleScrollXMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const startX = e.clientX;
+    const startPanX = panOffset.x;
+    const trackWidth = containerRef.current ? containerRef.current.clientWidth - 40 : 500;
+    const range = 3000;
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaX = moveEvent.clientX - startX;
+      const deltaPan = (deltaX / trackWidth) * range;
+      const newPanX = Math.max(-1500, Math.min(1500, startPanX - deltaPan));
+      setPanOffset({ ...panOffset, x: newPanX });
+    };
+    
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
+  const handleScrollYMouseDown = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const startY = e.clientY;
+    const startPanY = panOffset.y;
+    const trackHeight = containerRef.current ? containerRef.current.clientHeight - 40 : 500;
+    const range = 3000;
+    
+    const handleMouseMove = (moveEvent: MouseEvent) => {
+      const deltaY = moveEvent.clientY - startY;
+      const deltaPan = (deltaY / trackHeight) * range;
+      const newPanY = Math.max(-1500, Math.min(1500, startPanY - deltaPan));
+      setPanOffset({ ...panOffset, y: newPanY });
+    };
+    
+    const handleMouseUp = () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mouseup', handleMouseUp);
+    };
+    
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mouseup', handleMouseUp);
+  };
+
   // Bounding Selection Box Calculations for single elements
   const singleElement = selectedIds.length === 1 ? elements.find(el => el.id === selectedIds[0]) : null;
   
@@ -1301,6 +1347,68 @@ export const Canvas: React.FC<CanvasProps> = ({
           />
         </div>
       )}
+
+      {/* Horizontal Scrollbar */}
+      <div 
+        style={{
+          position: 'absolute',
+          bottom: '4px',
+          left: '4px',
+          right: '16px',
+          height: '8px',
+          background: 'rgba(0, 0, 0, 0.04)',
+          borderRadius: '4px',
+          zIndex: 1000,
+        }}
+      >
+        <div 
+          onMouseDown={handleScrollXMouseDown}
+          style={{
+            position: 'absolute',
+            left: `${Math.max(0, Math.min(80, ((1500 - panOffset.x) / 3000) * 80))}%`,
+            width: '20%',
+            height: '100%',
+            background: 'var(--text-muted)',
+            opacity: 0.35,
+            borderRadius: '4px',
+            cursor: 'pointer',
+            transition: 'opacity 0.15s, background-color 0.15s'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.6'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.35'; }}
+        />
+      </div>
+
+      {/* Vertical Scrollbar */}
+      <div 
+        style={{
+          position: 'absolute',
+          top: '4px',
+          bottom: '16px',
+          right: '4px',
+          width: '8px',
+          background: 'rgba(0, 0, 0, 0.04)',
+          borderRadius: '4px',
+          zIndex: 1000,
+        }}
+      >
+        <div 
+          onMouseDown={handleScrollYMouseDown}
+          style={{
+            position: 'absolute',
+            top: `${Math.max(0, Math.min(80, ((1500 - panOffset.y) / 3000) * 80))}%`,
+            height: '20%',
+            width: '100%',
+            background: 'var(--text-muted)',
+            opacity: 0.35,
+            borderRadius: '4px',
+            cursor: 'pointer',
+            transition: 'opacity 0.15s, background-color 0.15s'
+          }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = '0.6'; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = '0.35'; }}
+        />
+      </div>
 
     </div>
   );
