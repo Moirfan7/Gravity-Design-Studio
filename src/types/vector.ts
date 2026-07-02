@@ -58,6 +58,7 @@ export interface VectorElement {
   // Path specific
   points?: PathPoint[];
   isClosed?: boolean;
+  eraserPaths?: { strokeWidth: number; points: PathPoint[]; strokeId?: string }[];
 }
 
 export interface Keyframe {

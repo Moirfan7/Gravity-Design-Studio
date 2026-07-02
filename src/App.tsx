@@ -546,16 +546,25 @@ export const App: React.FC = () => {
 
 
 
-  const handleEraseAction = (deleteIds: string[], addElements: VectorElement[]) => {
-    if (deleteIds.length === 0 && addElements.length === 0) return;
+  const handleEraseAction = (deleteIds: string[], addElements: VectorElement[], updates: Partial<VectorElement>[] = []) => {
+    if (deleteIds.length === 0 && addElements.length === 0 && updates.length === 0) return;
     
     const newKfs = keyframes.filter((kf) => !deleteIds.includes(kf.elementId));
+    const updateMap = new Map(updates.map((u) => [u.id, u]));
+
     const updatedPages = pages.map((p) => {
       if (p.id === activePageId) {
         const filtered = p.elements.filter((el) => !deleteIds.includes(el.id));
+        const updated = filtered.map((el) => {
+          const up = updateMap.get(el.id);
+          if (up) {
+            return { ...el, ...up };
+          }
+          return el;
+        });
         return {
           ...p,
-          elements: [...filtered, ...addElements]
+          elements: [...updated, ...addElements]
         };
       }
       return p;

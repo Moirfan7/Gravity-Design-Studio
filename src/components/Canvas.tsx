@@ -12,7 +12,7 @@ interface CanvasProps {
   onClearSelection: () => void;
   onAddElement: (el: VectorElement) => void;
   onUpdateElements: (updates: Partial<VectorElement>[], overwrite?: boolean) => void;
-  onEraseAction: (deleteIds: string[], addElements: VectorElement[]) => void;
+  onEraseAction: (deleteIds: string[], addElements: VectorElement[], updates?: Partial<VectorElement>[]) => void;
   zoom: number;
   setZoom: (z: number) => void;
   panOffset: { x: number; y: number };
@@ -79,6 +79,7 @@ export const Canvas: React.FC<CanvasProps> = ({
   isViewOnly,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
+  const currentStrokeRef = useRef<string | null>(null);
   
   // Dragging & Interaction state
   const [isDragging, setIsDragging] = useState(false);
@@ -157,6 +158,21 @@ export const Canvas: React.FC<CanvasProps> = ({
     const x = (clientX - rect.left - panOffset.x) / zoom;
     const y = (clientY - rect.top - panOffset.y) / zoom;
     return { x, y };
+  };
+
+  const getLocalPoint = (px: number, py: number, el: VectorElement): PathPoint => {
+    const cx = el.width / 2;
+    const cy = el.height / 2;
+    const rad = (-el.rotation * Math.PI) / 180;
+    const dx = px - el.x - cx;
+    const dy = py - el.y - cy;
+    const rx = cx + dx * Math.cos(rad) - dy * Math.sin(rad);
+    const ry = cy + dx * Math.sin(rad) + dy * Math.cos(rad);
+    return {
+      id: Math.random().toString(36).substr(2, 9),
+      x: rx,
+      y: ry
+    };
   };
 
   // Setup global shortcuts for Esc / Enter to complete pen tool drawing
@@ -260,9 +276,13 @@ export const Canvas: React.FC<CanvasProps> = ({
       setDragAction('erase');
       setIsDragging(true);
       
+      currentStrokeRef.current = Math.random().toString(36).substr(2, 9);
+      const strokeId = currentStrokeRef.current;
+
       const radius = eraserSize / 2;
       const deleteIds: string[] = [];
       const addElements: VectorElement[] = [];
+      const updates: Partial<VectorElement>[] = [];
 
       page?.elements.forEach(el => {
         const elX1 = el.x;
@@ -275,72 +295,84 @@ export const Canvas: React.FC<CanvasProps> = ({
         
         if (dist > radius) return;
 
-        if (el.type !== 'path' || !el.points || el.points.length === 0) {
-          deleteIds.push(el.id);
-          return;
-        }
+        if (el.type === 'path' && el.points && el.points.length > 0) {
+          const segments: PathPoint[][] = [];
+          let currentSegment: PathPoint[] = [];
+          let hasErasedPoint = false;
 
-        const segments: PathPoint[][] = [];
-        let currentSegment: PathPoint[] = [];
-        let hasErasedPoint = false;
-
-        el.points.forEach(p => {
-          const px = el.x + p.x;
-          const py = el.y + p.y;
-          const isErased = Math.hypot(px - sx, py - sy) <= radius;
-          if (isErased) {
-            hasErasedPoint = true;
-            if (currentSegment.length > 0) {
-              segments.push(currentSegment);
-              currentSegment = [];
+          el.points.forEach(p => {
+            const px = el.x + p.x;
+            const py = el.y + p.y;
+            const isErased = Math.hypot(px - sx, py - sy) <= radius;
+            if (isErased) {
+              hasErasedPoint = true;
+              if (currentSegment.length > 0) {
+                segments.push(currentSegment);
+                currentSegment = [];
+              }
+            } else {
+              currentSegment.push(p);
             }
-          } else {
-            currentSegment.push(p);
+          });
+
+          if (currentSegment.length > 0) {
+            segments.push(currentSegment);
           }
-        });
 
-        if (currentSegment.length > 0) {
-          segments.push(currentSegment);
-        }
+          if (hasErasedPoint) {
+            deleteIds.push(el.id);
+            segments.forEach(seg => {
+              if (seg.length < 2) return;
+              const xs = seg.map(p => el.x + p.x);
+              const ys = seg.map(p => el.y + p.y);
+              const minX = Math.min(...xs);
+              const maxX = Math.max(...xs);
+              const minY = Math.min(...ys);
+              const maxY = Math.max(...ys);
+              const normalized = seg.map(p => ({
+                ...p,
+                x: (el.x + p.x) - minX,
+                y: (el.y + p.y) - minY
+              }));
 
-        if (hasErasedPoint) {
-          deleteIds.push(el.id);
-          segments.forEach(seg => {
-            if (seg.length < 2) return;
-            const xs = seg.map(p => el.x + p.x);
-            const ys = seg.map(p => el.y + p.y);
-            const minX = Math.min(...xs);
-            const maxX = Math.max(...xs);
-            const minY = Math.min(...ys);
-            const maxY = Math.max(...ys);
-            const normalized = seg.map(p => ({
-              ...p,
-              x: (el.x + p.x) - minX,
-              y: (el.y + p.y) - minY
-            }));
-
-            addElements.push({
-              id: Math.random().toString(36).substr(2, 9),
-              type: 'path',
-              name: `${el.name} (Split)`,
-              x: minX,
-              y: minY,
-              width: Math.max(2, maxX - minX),
-              height: Math.max(2, maxY - minY),
-              rotation: el.rotation,
-              opacity: el.opacity,
-              fill: el.fill,
-              stroke: el.stroke,
-              strokeWidth: el.strokeWidth,
-              points: normalized,
-              isClosed: false
+              addElements.push({
+                id: Math.random().toString(36).substr(2, 9),
+                type: 'path',
+                name: `${el.name} (Split)`,
+                x: minX,
+                y: minY,
+                width: Math.max(2, maxX - minX),
+                height: Math.max(2, maxY - minY),
+                rotation: el.rotation,
+                opacity: el.opacity,
+                fill: el.fill,
+                stroke: el.stroke,
+                strokeWidth: el.strokeWidth,
+                points: normalized,
+                isClosed: false,
+                eraserPaths: el.eraserPaths ? [...el.eraserPaths] : []
+              });
             });
+          }
+        } else {
+          const localPt = getLocalPoint(sx, sy, el);
+          const currentPaths = el.eraserPaths ? [...el.eraserPaths] : [];
+          
+          const newPath = {
+            strokeId: strokeId,
+            strokeWidth: eraserSize,
+            points: [localPt]
+          };
+
+          updates.push({
+            id: el.id,
+            eraserPaths: [...currentPaths, newPath]
           });
         }
       });
 
-      if (deleteIds.length > 0 || addElements.length > 0) {
-        onEraseAction(deleteIds, addElements);
+      if (deleteIds.length > 0 || addElements.length > 0 || updates.length > 0) {
+        onEraseAction(deleteIds, addElements, updates);
       }
       return;
     }
@@ -432,6 +464,8 @@ export const Canvas: React.FC<CanvasProps> = ({
       const radius = eraserSize / 2;
       const deleteIds: string[] = [];
       const addElements: VectorElement[] = [];
+      const updates: Partial<VectorElement>[] = [];
+      const strokeId = currentStrokeRef.current || Math.random().toString(36).substr(2, 9);
 
       page?.elements.forEach(el => {
         const elX1 = el.x;
@@ -444,72 +478,96 @@ export const Canvas: React.FC<CanvasProps> = ({
         
         if (dist > radius) return;
 
-        if (el.type !== 'path' || !el.points || el.points.length === 0) {
-          deleteIds.push(el.id);
-          return;
-        }
+        if (el.type === 'path' && el.points && el.points.length > 0) {
+          const segments: PathPoint[][] = [];
+          let currentSegment: PathPoint[] = [];
+          let hasErasedPoint = false;
 
-        const segments: PathPoint[][] = [];
-        let currentSegment: PathPoint[] = [];
-        let hasErasedPoint = false;
-
-        el.points.forEach(p => {
-          const px = el.x + p.x;
-          const py = el.y + p.y;
-          const isErased = Math.hypot(px - canvasX, py - canvasY) <= radius;
-          if (isErased) {
-            hasErasedPoint = true;
-            if (currentSegment.length > 0) {
-              segments.push(currentSegment);
-              currentSegment = [];
+          el.points.forEach(p => {
+            const px = el.x + p.x;
+            const py = el.y + p.y;
+            const isErased = Math.hypot(px - canvasX, py - canvasY) <= radius;
+            if (isErased) {
+              hasErasedPoint = true;
+              if (currentSegment.length > 0) {
+                segments.push(currentSegment);
+                currentSegment = [];
+              }
+            } else {
+              currentSegment.push(p);
             }
-          } else {
-            currentSegment.push(p);
-          }
-        });
-
-        if (currentSegment.length > 0) {
-          segments.push(currentSegment);
-        }
-
-        if (hasErasedPoint) {
-          deleteIds.push(el.id);
-          segments.forEach(seg => {
-            if (seg.length < 2) return;
-            const xs = seg.map(p => el.x + p.x);
-            const ys = seg.map(p => el.y + p.y);
-            const minX = Math.min(...xs);
-            const maxX = Math.max(...xs);
-            const minY = Math.min(...ys);
-            const maxY = Math.max(...ys);
-            const normalized = seg.map(p => ({
-              ...p,
-              x: (el.x + p.x) - minX,
-              y: (el.y + p.y) - minY
-            }));
-
-            addElements.push({
-              id: Math.random().toString(36).substr(2, 9),
-              type: 'path',
-              name: `${el.name} (Split)`,
-              x: minX,
-              y: minY,
-              width: Math.max(2, maxX - minX),
-              height: Math.max(2, maxY - minY),
-              rotation: el.rotation,
-              opacity: el.opacity,
-              fill: el.fill,
-              stroke: el.stroke,
-              strokeWidth: el.strokeWidth,
-              points: normalized,
-              isClosed: false
-            });
           });
+
+          if (currentSegment.length > 0) {
+            segments.push(currentSegment);
+          }
+
+          if (hasErasedPoint) {
+            deleteIds.push(el.id);
+            segments.forEach(seg => {
+              if (seg.length < 2) return;
+              const xs = seg.map(p => el.x + p.x);
+              const ys = seg.map(p => el.y + p.y);
+              const minX = Math.min(...xs);
+              const maxX = Math.max(...xs);
+              const minY = Math.min(...ys);
+              const maxY = Math.max(...ys);
+              const normalized = seg.map(p => ({
+                ...p,
+                x: (el.x + p.x) - minX,
+                y: (el.y + p.y) - minY
+              }));
+
+              addElements.push({
+                id: Math.random().toString(36).substr(2, 9),
+                type: 'path',
+                name: `${el.name} (Split)`,
+                x: minX,
+                y: minY,
+                width: Math.max(2, maxX - minX),
+                height: Math.max(2, maxY - minY),
+                rotation: el.rotation,
+                opacity: el.opacity,
+                fill: el.fill,
+                stroke: el.stroke,
+                strokeWidth: el.strokeWidth,
+                points: normalized,
+                isClosed: false,
+                eraserPaths: el.eraserPaths ? [...el.eraserPaths] : []
+              });
+            });
+          }
+        } else {
+          const localPt = getLocalPoint(canvasX, canvasY, el);
+          const currentPaths = el.eraserPaths ? [...el.eraserPaths] : [];
+          
+          if (currentPaths.length > 0 && currentPaths[currentPaths.length - 1].strokeId === strokeId) {
+            const lastPath = currentPaths[currentPaths.length - 1];
+            const updatedLastPath = {
+              ...lastPath,
+              points: [...lastPath.points, localPt]
+            };
+            const updatedPathsList = [...currentPaths.slice(0, -1), updatedLastPath];
+            updates.push({
+              id: el.id,
+              eraserPaths: updatedPathsList
+            });
+          } else {
+            const newPath = {
+              strokeId: strokeId,
+              strokeWidth: eraserSize,
+              points: [localPt]
+            };
+            updates.push({
+              id: el.id,
+              eraserPaths: [...currentPaths, newPath]
+            });
+          }
         }
       });
 
-      if (deleteIds.length > 0 || addElements.length > 0) {
-        onEraseAction(deleteIds, addElements);
+      if (deleteIds.length > 0 || addElements.length > 0 || updates.length > 0) {
+        onEraseAction(deleteIds, addElements, updates);
       }
       return;
     }
@@ -793,6 +851,27 @@ export const Canvas: React.FC<CanvasProps> = ({
             );
           }
         })}
+
+        {/* Compile elements' masks dynamically for erasing */}
+        {elements.map((el) => {
+          if (!el.eraserPaths || el.eraserPaths.length === 0) return null;
+          return (
+            <mask id={`mask-${el.id}`} key={`mask-${el.id}`} maskUnits="userSpaceOnUse">
+              <rect x="-10000" y="-10000" width="20000" height="20000" fill="white" />
+              {el.eraserPaths.map((path, pIdx) => (
+                <path
+                  key={pIdx}
+                  d={getPathD(path.points, false)}
+                  fill="none"
+                  stroke="black"
+                  strokeWidth={path.strokeWidth}
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                />
+              ))}
+            </mask>
+          );
+        })}
       </defs>
     );
   };
@@ -849,8 +928,6 @@ export const Canvas: React.FC<CanvasProps> = ({
 
           {/* Render Elements */}
           {elements.map((el) => {
-            const cx = el.x + el.width / 2;
-            const cy = el.y + el.height / 2;
             const shadowStr = el.shadow 
               ? `drop-shadow(${el.shadow.offsetX}px ${el.shadow.offsetY}px ${el.shadow.blur}px rgba(${parseInt(el.shadow.color.slice(1,3),16)}, ${parseInt(el.shadow.color.slice(3,5),16)}, ${parseInt(el.shadow.color.slice(5,7),16)}, ${el.shadow.opacity}))`
               : 'none';
@@ -858,8 +935,6 @@ export const Canvas: React.FC<CanvasProps> = ({
             // Common attributes
             const commonProps = {
               style: {
-                transform: `rotate(${el.rotation}deg)`,
-                transformOrigin: `${cx}px ${cy}px`,
                 filter: shadowStr,
                 opacity: el.opacity,
                 cursor: activeTool === 'select' ? 'pointer' : 'crosshair'
@@ -878,92 +953,92 @@ export const Canvas: React.FC<CanvasProps> = ({
               }
             };
 
-            switch (el.type) {
-              case 'rectangle':
-                return (
-                  <rect
-                    key={el.id}
-                    x={el.x}
-                    y={el.y}
-                    width={el.width}
-                    height={el.height}
-                    rx={el.cornerRadius || 0}
-                    ry={el.cornerRadius || 0}
-                    {...commonProps}
-                  />
-                );
-              case 'ellipse':
-                return (
-                  <ellipse
-                    key={el.id}
-                    cx={cx}
-                    cy={cy}
-                    rx={el.width / 2}
-                    ry={el.height / 2}
-                    {...commonProps}
-                  />
-                );
-              case 'line':
-                return (
-                  <line
-                    key={el.id}
-                    x1={el.x}
-                    y1={el.y}
-                    x2={el.x + el.width}
-                    y2={el.y + el.height}
-                    {...commonProps}
-                  />
-                );
-              case 'triangle':
-                return (
-                  <polygon
-                    key={el.id}
-                    points={`${el.x + el.width/2},${el.y} ${el.x + el.width},${el.y + el.height} ${el.x},${el.y + el.height}`}
-                    {...commonProps}
-                  />
-                );
-              case 'star':
-                return (
-                  <polygon
-                    key={el.id}
-                    points={getStarPoints(cx, cy, el.width/2, el.height/2)}
-                    {...commonProps}
-                  />
-                );
-              case 'text':
-                return (
-                  <text
-                    key={el.id}
-                    x={el.x}
-                    y={el.y + el.height / 1.3} // Visual text vertical adjustment
-                    fontSize={el.fontSize || 16}
-                    fontWeight={el.fontWeight || 'normal'}
-                    textAnchor={el.textAlign === 'center' ? 'middle' : el.textAlign === 'right' ? 'end' : 'start'}
-                    {...commonProps}
-                    style={{
-                      ...commonProps.style,
-                      fontFamily: el.fontFamily || 'Outfit'
-                    }}
-                  >
-                    {el.text}
-                  </text>
-                );
-              case 'path':
-                return (
-                  <path
-                    key={el.id}
-                    d={getPathD(el.points || [], el.isClosed || false)}
-                    {...commonProps}
-                    style={{
-                      ...commonProps.style,
-                      transform: `translate(${el.x}px, ${el.y}px) rotate(${el.rotation}deg)`,
-                      transformOrigin: '50% 50%'
-                    }}
-                  />
-                );
-              default:
-                return null;
-            }
+            const innerElement = (() => {
+              switch (el.type) {
+                case 'rectangle':
+                  return (
+                    <rect
+                      x={0}
+                      y={0}
+                      width={el.width}
+                      height={el.height}
+                      rx={el.cornerRadius || 0}
+                      ry={el.cornerRadius || 0}
+                      {...commonProps}
+                    />
+                  );
+                case 'ellipse':
+                  return (
+                    <ellipse
+                      cx={el.width / 2}
+                      cy={el.height / 2}
+                      rx={el.width / 2}
+                      ry={el.height / 2}
+                      {...commonProps}
+                    />
+                  );
+                case 'line':
+                  return (
+                    <line
+                      x1={0}
+                      y1={0}
+                      x2={el.width}
+                      y2={el.height}
+                      {...commonProps}
+                    />
+                  );
+                case 'triangle':
+                  return (
+                    <polygon
+                      points={`${el.width/2},0 ${el.width},${el.height} 0,${el.height}`}
+                      {...commonProps}
+                    />
+                  );
+                case 'star':
+                  return (
+                    <polygon
+                      points={getStarPoints(el.width/2, el.height/2, el.width/2, el.height/2)}
+                      {...commonProps}
+                    />
+                  );
+                case 'text':
+                  return (
+                    <text
+                      x={0}
+                      y={el.height / 1.3} // Visual text vertical adjustment
+                      fontSize={el.fontSize || 16}
+                      fontWeight={el.fontWeight || 'normal'}
+                      textAnchor={el.textAlign === 'center' ? 'middle' : el.textAlign === 'right' ? 'end' : 'start'}
+                      {...commonProps}
+                      style={{
+                        ...commonProps.style,
+                        fontFamily: el.fontFamily || 'Outfit'
+                      }}
+                    >
+                      {el.text}
+                    </text>
+                  );
+                case 'path':
+                  return (
+                    <path
+                      d={getPathD(el.points || [], el.isClosed || false)}
+                      {...commonProps}
+                    />
+                  );
+                default:
+                  return null;
+              }
+            })();
+
+            return (
+              <g
+                key={el.id}
+                transform={`translate(${el.x}, ${el.y}) rotate(${el.rotation}, ${el.width/2}, ${el.height/2})`}
+                mask={el.eraserPaths && el.eraserPaths.length > 0 ? `url(#mask-${el.id})` : undefined}
+              >
+                {innerElement}
+              </g>
+            );
           })}
 
           {/* Pen tool drawing preview nodes */}
