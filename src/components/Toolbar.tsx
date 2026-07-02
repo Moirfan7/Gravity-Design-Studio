@@ -98,29 +98,7 @@ export const Toolbar: React.FC<ToolbarProps> = ({
       padding: '0 16px',
       zIndex: 100,
       borderBottom: '1px solid var(--border-color)',
-      position: 'relative'
     }}>
-      {/* Centered App Brand Title */}
-      <div 
-        onClick={onNew}
-        style={{
-          position: 'absolute',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          fontSize: '15px',
-          fontWeight: '800',
-          cursor: 'pointer',
-          letterSpacing: '1px',
-          background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent',
-          zIndex: 10,
-          fontFamily: 'var(--font-sans)'
-        }}
-      >
-        GRAVITY DESIGN STUDIO
-      </div>
-
       {/* Left section: Logo & File Options */}
       <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
@@ -141,16 +119,17 @@ export const Toolbar: React.FC<ToolbarProps> = ({
             <Home size={16} />
           </button>
           <div 
+            onClick={onNew}
             style={{ 
-              fontSize: '13px', 
-              fontWeight: '600', 
-              color: 'var(--text-main)',
-              marginLeft: '4px',
-              fontFamily: 'var(--font-sans)',
-              opacity: 0.8
+              fontSize: '15px', 
+              fontWeight: '700', 
+              cursor: 'pointer',
+              background: 'linear-gradient(135deg, var(--accent), var(--accent-secondary))',
+              WebkitBackgroundClip: 'text',
+              WebkitTextFillColor: 'transparent',
             }}
           >
-            {projectName}
+            Gravity
           </div>
           
           {/* Cloud Sync Status Indicator */}
