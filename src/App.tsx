@@ -51,8 +51,25 @@ const validateAndSanitizeProjectState = (state: any): { pages: Page[]; keyframes
             rotation: Number(el.rotation) || 0,
             opacity: el.opacity !== undefined ? Math.max(0, Math.min(1, Number(el.opacity))) : 1,
             fill: el.fill ? String(el.fill).slice(0, 100) : '#000000',
+            fillGradient: el.fillGradient ? {
+              type: String(el.fillGradient.type) as any,
+              angle: Number(el.fillGradient.angle) || 0,
+              stops: Array.isArray(el.fillGradient.stops) ? el.fillGradient.stops.map((s: any) => ({
+                offset: Number(s.offset) || 0,
+                color: String(s.color || '#000000').slice(0, 50)
+              })) : []
+            } : undefined,
             stroke: el.stroke ? String(el.stroke).slice(0, 100) : 'none',
             strokeWidth: el.strokeWidth !== undefined ? Number(el.strokeWidth) : 0,
+            strokeDasharray: el.strokeDasharray ? String(el.strokeDasharray).slice(0, 50) : undefined,
+            shadow: el.shadow ? {
+              color: String(el.shadow.color || '#000000').slice(0, 50),
+              blur: Number(el.shadow.blur) || 0,
+              offsetX: Number(el.shadow.offsetX) || 0,
+              offsetY: Number(el.shadow.offsetY) || 0,
+              opacity: Number(el.shadow.opacity) || 0
+            } : undefined,
+            cornerRadius: el.cornerRadius !== undefined ? Number(el.cornerRadius) : undefined,
             points: Array.isArray(el.points) ? el.points.map((pt: any) => ({
               id: String(pt.id || ''),
               x: Number(pt.x) || 0,
@@ -72,7 +89,8 @@ const validateAndSanitizeProjectState = (state: any): { pages: Page[]; keyframes
             fontSize: el.fontSize !== undefined ? Number(el.fontSize) : undefined,
             fontWeight: el.fontWeight ? String(el.fontWeight).slice(0, 20) : undefined,
             text: el.text ? String(el.text).slice(0, 5000) : undefined,
-            textAlign: el.textAlign ? String(el.textAlign) as any : undefined
+            textAlign: el.textAlign ? String(el.textAlign) as any : undefined,
+            lineHeight: el.lineHeight !== undefined ? Number(el.lineHeight) : undefined
           });
         }
       }
