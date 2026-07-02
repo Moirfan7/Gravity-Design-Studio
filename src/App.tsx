@@ -10,6 +10,100 @@ import type { Page, VectorElement, Keyframe, ToolType } from './types/vector';
 import { useHistory } from './hooks/useHistory';
 import { interpolateProperty } from './utils/vectorMath';
 
+// Security Helper: Safe JSON parser that blocks Prototype Pollution
+const safeJsonParse = (json: string): any => {
+  try {
+    return JSON.parse(json, (key, value) => {
+      if (key === '__proto__' || key === 'constructor' || key === 'prototype') {
+        return undefined;
+      }
+      return value;
+    });
+  } catch (e) {
+    return null;
+  }
+};
+
+// Security Helper: Deep validation & sanitization of project layouts
+const validateAndSanitizeProjectState = (state: any): { pages: Page[]; keyframes: Keyframe[] } | null => {
+  if (!state || typeof state !== 'object') return null;
+  
+  const pages: Page[] = [];
+  const keyframes: Keyframe[] = [];
+
+  if (Array.isArray(state.pages)) {
+    for (const p of state.pages) {
+      if (!p || typeof p !== 'object' || typeof p.id !== 'string') continue;
+      
+      const elements: VectorElement[] = [];
+      if (Array.isArray(p.elements)) {
+        for (const el of p.elements) {
+          if (!el || typeof el !== 'object' || typeof el.id !== 'string') continue;
+          
+          elements.push({
+            id: String(el.id).replace(/[^\w-]/g, ''),
+            type: String(el.type) as any,
+            name: String(el.name || 'Element').slice(0, 100),
+            x: Number(el.x) || 0,
+            y: Number(el.y) || 0,
+            width: Number(el.width) || 10,
+            height: Number(el.height) || 10,
+            rotation: Number(el.rotation) || 0,
+            opacity: el.opacity !== undefined ? Math.max(0, Math.min(1, Number(el.opacity))) : 1,
+            fill: el.fill ? String(el.fill).slice(0, 100) : '#000000',
+            stroke: el.stroke ? String(el.stroke).slice(0, 100) : 'none',
+            strokeWidth: el.strokeWidth !== undefined ? Number(el.strokeWidth) : 0,
+            points: Array.isArray(el.points) ? el.points.map((pt: any) => ({
+              id: String(pt.id || ''),
+              x: Number(pt.x) || 0,
+              y: Number(pt.y) || 0
+            })) : undefined,
+            isClosed: el.isClosed !== undefined ? Boolean(el.isClosed) : undefined,
+            eraserPaths: Array.isArray(el.eraserPaths) ? el.eraserPaths.map((ep: any) => ({
+              strokeWidth: Number(ep.strokeWidth) || 10,
+              points: Array.isArray(ep.points) ? ep.points.map((pt: any) => ({
+                id: String(pt.id || ''),
+                x: Number(pt.x) || 0,
+                y: Number(pt.y) || 0
+              })) : [],
+              strokeId: ep.strokeId ? String(ep.strokeId) : undefined
+            })) : undefined,
+            fontFamily: el.fontFamily ? String(el.fontFamily).slice(0, 50) : undefined,
+            fontSize: el.fontSize !== undefined ? Number(el.fontSize) : undefined,
+            fontWeight: el.fontWeight ? String(el.fontWeight).slice(0, 20) : undefined,
+            text: el.text ? String(el.text).slice(0, 5000) : undefined,
+            textAlign: el.textAlign ? String(el.textAlign) as any : undefined
+          });
+        }
+      }
+
+      pages.push({
+        id: String(p.id).replace(/[^\w-]/g, ''),
+        name: String(p.name || 'Page').slice(0, 100),
+        width: Number(p.width) || 800,
+        height: Number(p.height) || 600,
+        background: p.background ? String(p.background).slice(0, 50) : '#ffffff',
+        elements
+      });
+    }
+  }
+
+  if (Array.isArray(state.keyframes)) {
+    for (const kf of state.keyframes) {
+      if (!kf || typeof kf !== 'object' || typeof kf.id !== 'string') continue;
+      keyframes.push({
+        id: String(kf.id).replace(/[^\w-]/g, ''),
+        elementId: String(kf.elementId).replace(/[^\w-]/g, ''),
+        property: String(kf.property) as any,
+        frame: Number(kf.frame) || 0,
+        value: typeof kf.value === 'number' ? Number(kf.value) : String(kf.value).slice(0, 100)
+      });
+    }
+  }
+
+  return { pages, keyframes };
+};
+
 // Initial project layout loaded when Dashboard launches a template
 const createDemoElements = (width: number, height: number): VectorElement[] => [
   {
@@ -184,13 +278,14 @@ export const App: React.FC = () => {
       if (sharedData) {
         try {
           const jsonStr = decodeURIComponent(escape(atob(sharedData)));
-          const decoded = JSON.parse(jsonStr);
-          if (decoded && decoded.pages && decoded.pages.length > 0) {
+          const parsed = safeJsonParse(jsonStr);
+          const validated = validateAndSanitizeProjectState(parsed);
+          if (validated && validated.pages && validated.pages.length > 0) {
             setProjectState({
-              pages: decoded.pages,
-              keyframes: decoded.keyframes || []
+              pages: validated.pages,
+              keyframes: validated.keyframes
             });
-            setActivePageId(decoded.pages[0].id);
+            setActivePageId(validated.pages[0].id);
           }
         } catch (e) {
           console.error("Failed to decode shared project snapshot data", e);
@@ -456,14 +551,17 @@ export const App: React.FC = () => {
         resetProjectState({ pages: [defaultPage], keyframes: [] });
         setActivePageId(defaultPage.id);
       } else {
-        const data = JSON.parse(text);
-        setProjectName(data.projectName || 'Imported Design');
-        resetProjectState({
-          pages: data.pages || [],
-          keyframes: data.keyframes || []
-        });
-        if (data.pages && data.pages.length > 0) {
-          setActivePageId(data.pages[0].id);
+        const parsed = safeJsonParse(text);
+        const validated = validateAndSanitizeProjectState(parsed);
+        if (validated && validated.pages && validated.pages.length > 0) {
+          setProjectName((parsed && parsed.projectName) ? String(parsed.projectName).slice(0, 100) : 'Imported Design');
+          resetProjectState({
+            pages: validated.pages,
+            keyframes: validated.keyframes
+          });
+          setActivePageId(validated.pages[0].id);
+        } else {
+          throw new Error('Invalid project structure or format');
         }
       }
       setShowDashboard(false);
