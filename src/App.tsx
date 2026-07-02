@@ -5,6 +5,7 @@ import { Sidebar } from './components/Sidebar';
 import { Canvas } from './components/Canvas';
 import { Inspector } from './components/Inspector';
 import { Timeline } from './components/Timeline';
+import HeroSection from './components/HeroSection';
 import type { Page, VectorElement, Keyframe, ToolType } from './types/vector';
 import { useHistory } from './hooks/useHistory';
 import { interpolateProperty } from './utils/vectorMath';
@@ -161,6 +162,7 @@ export const App: React.FC = () => {
   const [pencilColor, setPencilColor] = useState<string>('#8076a3');
   const [eraserSize, setEraserSize] = useState<number>(20);
   const [copiedElements, setCopiedElements] = useState<VectorElement[]>([]);
+  const [showLandingPage, setShowLandingPage] = useState(true);
 
   // Check URL Query Parameters for shared link on load
   useEffect(() => {
@@ -170,6 +172,7 @@ export const App: React.FC = () => {
     const sharedData = params.get('data');
     
     if (sharedProject) {
+      setShowLandingPage(false);
       setShowDashboard(false);
       const decodedName = decodeURIComponent(sharedProject).toUpperCase().replace(/-/g, ' ');
       setProjectName(decodedName);
@@ -1138,6 +1141,10 @@ export const App: React.FC = () => {
         </div>
       </div>
     );
+  }
+
+  if (showLandingPage) {
+    return <HeroSection onGetStarted={() => setShowLandingPage(false)} />;
   }
 
   return (
