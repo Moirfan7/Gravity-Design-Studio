@@ -163,6 +163,7 @@ export const App: React.FC = () => {
   const [eraserSize, setEraserSize] = useState<number>(20);
   const [copiedElements, setCopiedElements] = useState<VectorElement[]>([]);
   const [showLandingPage, setShowLandingPage] = useState(true);
+  const hasSharedLinkRef = useRef(false);
 
   // Check URL Query Parameters for shared link on load
   useEffect(() => {
@@ -172,7 +173,7 @@ export const App: React.FC = () => {
     const sharedData = params.get('data');
     
     if (sharedProject) {
-      setShowLandingPage(false);
+      hasSharedLinkRef.current = true;
       setShowDashboard(false);
       const decodedName = decodeURIComponent(sharedProject).toUpperCase().replace(/-/g, ' ');
       setProjectName(decodedName);
@@ -1144,7 +1145,16 @@ export const App: React.FC = () => {
   }
 
   if (showLandingPage) {
-    return <HeroSection onGetStarted={() => setShowLandingPage(false)} />;
+    return (
+      <HeroSection 
+        onGetStarted={() => { 
+          setShowLandingPage(false); 
+          if (!hasSharedLinkRef.current) {
+            setShowDashboard(true); 
+          }
+        }} 
+      />
+    );
   }
 
   return (

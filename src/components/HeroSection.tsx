@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import Hls from "hls.js";
 import { motion } from "motion/react";
-import { ArrowRight, ChevronDown } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 
 interface HeroSectionProps {
   onGetStarted: () => void;
@@ -155,89 +155,8 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           <span style={{ fontWeight: 800, fontSize: "16px", letterSpacing: "0.5px" }}>GRAVITY</span>
         </div>
 
-        {/* Center Section (Navigation Links) */}
-        {!isMobile && (
-          <nav
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "32px",
-              fontSize: "14px",
-              fontWeight: 500,
-            }}
-          >
-            <a
-              href="#"
-              style={{
-                color: "rgba(255, 255, 255, 0.8)",
-                textDecoration: "none",
-                display: "flex",
-                alignItems: "center",
-                gap: "4px",
-                transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255, 255, 255, 0.8)")}
-            >
-              Products <ChevronDown size={14} />
-            </a>
-            <a
-              href="#"
-              style={{
-                color: "rgba(255, 255, 255, 0.8)",
-                textDecoration: "none",
-                transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255, 255, 255, 0.8)")}
-            >
-              Customer Stories
-            </a>
-            <a
-              href="#"
-              style={{
-                color: "rgba(255, 255, 255, 0.8)",
-                textDecoration: "none",
-                transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255, 255, 255, 0.8)")}
-            >
-              Resources
-            </a>
-            <a
-              href="#"
-              style={{
-                color: "rgba(255, 255, 255, 0.8)",
-                textDecoration: "none",
-                transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255, 255, 255, 0.8)")}
-            >
-              Pricing
-            </a>
-          </nav>
-        )}
-
         {/* Right Section */}
         <div style={{ display: "flex", alignItems: "center", gap: "20px" }}>
-          {!isMobile && (
-            <a
-              href="#"
-              style={{
-                color: "rgba(255, 255, 255, 0.8)",
-                textDecoration: "none",
-                fontSize: "14px",
-                fontWeight: 500,
-                transition: "color 0.2s",
-              }}
-              onMouseEnter={(e) => (e.currentTarget.style.color = "#ffffff")}
-              onMouseLeave={(e) => (e.currentTarget.style.color = "rgba(255, 255, 255, 0.8)")}
-            >
-              Book A Demo
-            </a>
-          )}
           <button
             onClick={onGetStarted}
             style={{
@@ -318,22 +237,7 @@ const HeroSection: React.FC<HeroSectionProps> = ({ onGetStarted }) => {
           Build Faster
         </motion.h1>
 
-        {/* Subheadline */}
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 0.7 }}
-          transition={{ delay: 0.4, duration: 0.6 }}
-          style={{
-            fontFamily: '"Instrument Sans", sans-serif',
-            fontSize: isMobile ? "16px" : "20px",
-            lineHeight: 1.65,
-            color: "#ffffff",
-            maxWidth: "600px",
-            margin: "0 auto",
-          }}
-        >
-          Create fully functional, SEO-optimized websites in seconds with our advanced AI engine.
-        </motion.p>
+
 
         {/* CTA Buttons */}
         <motion.div
